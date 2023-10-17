@@ -1,0 +1,65 @@
+<template>
+  <div class="text-gray-500 font-bold flex gap-3 flex-wrap">
+    <template v-for="item in items">
+      <PaletteItem @click="item.onClick" :pressed="item.pressed">
+        <img :src="item.icon">
+        <span class="text-xs">
+          {{ item.label }}
+        </span>
+      </PaletteItem>
+    </template>
+  </div>
+</template>
+<script lang="ts" setup>
+import PaletteItem from './Palettes/PaletteItem.vue'
+import { computed, inject } from 'vue';
+import { AudiOtterComposition, lynreSynthKey } from '../hooks/AudiOtterState';
+import CableIcon from '../assets/icons/cable.svg'
+import DelayIcon from '../assets/icons/delay.svg'
+import BiquadIcon from '../assets/icons/biquad.svg'
+import { CreateToolParam } from '../hooks/intractive_tool';
+
+const { selectedPalette, changeTool } = inject(lynreSynthKey) as AudiOtterComposition
+
+const createPatteItemData = (param:  CreateToolParam) => {
+  const selected = selectedPalette.value === param.type
+
+  const defaultToolParam: CreateToolParam = {
+    type: 'default'
+  }
+  switch(param.type) {
+    case 'cable':
+      return {
+        icon: CableIcon,
+        onClick: () => changeTool(selected ? defaultToolParam : param),
+        label: 'Cable',
+        pressed: selected
+      }
+    case 'delay':
+      return {
+        icon: DelayIcon,
+        onClick: () => changeTool(selected ? defaultToolParam : param),
+        label: 'Delay',
+        pressed: selected
+      }
+    case 'biquad_filter':
+      return {
+        icon: BiquadIcon,
+        onClick: () => changeTool(selected ? defaultToolParam : param),
+        label: 'Biquad',
+        pressed: selected
+      }
+    default:
+      throw new Error('invalid type')
+  }
+}
+
+const items = computed(() => {
+  return [
+    createPatteItemData({ type: 'cable'}),
+    createPatteItemData({ type: 'delay'}),
+    createPatteItemData({ type: 'biquad_filter'}),
+  ]
+})
+
+</script>
