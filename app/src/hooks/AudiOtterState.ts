@@ -1,8 +1,8 @@
 import { nanoid } from "nanoid";
-import { InjectionKey, computed, reactive, readonly, ref } from "vue"
-import { BiquadFilter, Delay, DestinationModule, Item, Link, LinkMap, AudiOtterState, MicIn, Module, SourceModule, SpeakerOut } from "./types";
+import { InjectionKey, computed, reactive, readonly} from "vue"
+import { BiquadFilter, Delay, Item, LinkMap, AudiOtterState, MicIn, Module, SpeakerOut } from "./types";
 import { useIntractiveTool } from "./intractive_tool";
-import { connectModules, onDeleteLinkHandler } from "./module_updater";
+import { connectModules, onDeleteLinkHandler, onDeleteModuleHandler } from "./module_updater";
 
 const loadModules = async () => {
   const mediaStreamStream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -89,11 +89,13 @@ const useAudiOtter = () => {
 
   return {
     state: readonly(mutableState),
+    getMutableState: () => mutableState,
     selectedItem: computed<Item | undefined>(() => {
       return  mutableState.modules.find((module) => module.id === mutableState.selectedItems[0]) ||
         mutableState.linkMap.get(mutableState.selectedItems[0]);
     }),
     onDeleteLink: onDeleteLinkHandler(mutableState),
+    onDeleteModule: onDeleteModuleHandler(mutableState),
     tool,
     init,
     selectedPalette,

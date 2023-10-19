@@ -3,6 +3,7 @@ export interface Position {
   y: number;
 }
 
+type BaseModuleParam<T extends AudioNodeOptions> = Omit<Required<T>,'channelCount' | 'channelCountMode' | 'channelInterpretation'> 
 export interface BaseModule {
   id: string;
   position: Position;
@@ -18,13 +19,34 @@ export interface BiquadFilter extends BaseModule {
   brand: 'biquad_filter';
   source: BiquadFilterNode;
 }
+export type BiquadFilterParam = BaseModuleParam<BiquadFilterOptions>
 
 export interface Delay extends BaseModule {
   brand: 'delay';
   source: DelayNode;
 }
+export type DelayParam = BaseModuleParam<DelayOptions>
 
+export type ModuleParam = BiquadFilterParam | DelayParam;
+
+export type InOutModule =  BiquadFilter | Delay;
 export type SourceModule = MicIn | BiquadFilter | Delay;
+
+
+export interface UpdateBiquadFilterEvent {
+  brand: 'biquad_filter';
+  module: BiquadFilter;
+  param: BiquadFilterParam;
+}
+
+export interface UpdateDelayEvent {
+  brand: 'delay';
+  module: Delay;
+  param: DelayParam;
+}
+
+export type UpdateModuleEvent = UpdateBiquadFilterEvent | UpdateDelayEvent;
+
 
 export interface SpeakerOut extends BaseModule {
   brand: 'speaker_out';

@@ -7,6 +7,8 @@
 <script lang="ts" setup>
 import { computed, defineProps } from 'vue'
 
+const baseBtnClass = 'palette-item bg-blue-500 active:bg-blue-700 text-white py-2 px-4 border-b-4 border-blue-700 rounded flex justify-center items-center flex-col'
+const selectedBtnClass = baseBtnClass + '  translate-y-0.5  bg-blue-800'
 const props = defineProps({
   pressed: {
     type: Boolean,
@@ -16,7 +18,7 @@ const props = defineProps({
 
 const buttonClass = computed(() => {
   const selected = props.pressed ? 'selected' : ''
-  return `palette-item bg-blue-500 active:bg-blue-700 text-white py-2 px-4 border-b-4 border-blue-700 rounded ${selected} flex justify-center items-center flex-col`
+  return selected ? selectedBtnClass : baseBtnClass
 })
 
 </script>
@@ -25,9 +27,4 @@ const buttonClass = computed(() => {
   transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-.selected {
-  background-color: #1e40af;
-  transform: translateY(2px);
-  box-shadow: none;
-}
 </style>

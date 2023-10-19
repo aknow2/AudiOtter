@@ -1,9 +1,7 @@
 <template>
   <div class="w-full">
-    <div class="mb-4">
+    <div class="mb-4 flex justify-between">
       <span class=" text-gray-100 text-2xl"> Cable </span>
-    </div>
-    <div>
       <ContainButton color="delete" @click="() => props.onDelete(props.item.id)" > Delete </ContainButton>
     </div>
   </div>

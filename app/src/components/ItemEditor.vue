@@ -1,8 +1,14 @@
 <template>
   <div class="fixed bottom-0 flex justify-center w-full">
-    <div class="w-10/12 rounded bg-teal-700 p-4 h-52" >
+    <div class="w-10/12 rounded bg-teal-700 p-4 min-h-fit" >
       <template v-if="selectedItem?.brand === 'link'">
         <LinkEditor :item="selectedItem" :on-delete="onDeleteLink" />
+      </template>
+      <template v-else-if="selectedItem?.brand === 'biquad_filter'">
+        <BiquadEditor :on-change="updateModuleEvent" :item="selectedItem" :on-delete="onDeleteModule" />
+      </template>
+      <template v-else-if="selectedItem?.brand === 'delay'">
+        <Delay :on-change="updateModuleEvent" :item="selectedItem" :on-delete="onDeleteModule" />
       </template>
       <template v-else>
         <Palette />
@@ -13,9 +19,14 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { AudiOtterComposition, lynreSynthKey } from '../hooks/AudiOtterState';
+import { createModuleUpdater } from '../hooks/module_updater';
 import LinkEditor from './editors/Link.vue';
+import BiquadEditor from './editors/Biquad.vue';
 import Palette from './Palette.vue';
+import Delay from './editors/Delay.vue';
 
-const { selectedItem, onDeleteLink } = inject(lynreSynthKey) as AudiOtterComposition
+const { selectedItem, onDeleteLink, onDeleteModule, getMutableState } = inject(lynreSynthKey) as AudiOtterComposition
+const updateModuleEvent = createModuleUpdater(getMutableState());
+
 
 </script>

@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { BiquadFilter, Delay, DestinationModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, SourceModule, SpeakerOut } from "./types";
+import { BiquadFilter, Delay, DestinationModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, SourceModule, SpeakerOut, ModuleParam, BiquadFilterParam, DelayParam, UpdateModuleEvent } from "./types";
 
 const isSourceModule = (module: Module|undefined): module is SourceModule => {
   return module?.brand === 'mic_in' || module?.brand === 'biquad_filter' || module?.brand === 'delay';
@@ -100,6 +100,22 @@ const createBiquadFilter = (audioContext: AudioContext, param: CreateModuleParam
   }
 }
 
+
+const updateSourceModule = ({ brand, module, param }: UpdateModuleEvent) => {
+  switch (brand) {
+    case 'delay':
+      module.source.delayTime.value = param.delayTime;
+      break;
+    case 'biquad_filter':
+      module.source.type = param.type;
+      module.source.frequency.value = param.frequency;
+      module.source.Q.value = param.Q;
+      break;
+    default:
+      throw new Error('not support')
+  }
+}
+
 const createModule = (param: CreateModuleParam, audioContext: AudioContext): Module => {
   switch (param.type) {
     case 'delay':
@@ -111,21 +127,49 @@ const createModule = (param: CreateModuleParam, audioContext: AudioContext): Mod
   }
 }
 
+export const createModuleUpdater = (state: AudiOtterState) => (ev: UpdateModuleEvent) => {
+  const { module } = ev;
+  updateSourceModule(ev);
+  state.modules = state.modules.map((m) => {
+    if (m.id === module.id) {
+      return module;
+    }
+    return m;
+  })
+}
+
 export const createModuleCreator = (state: AudiOtterState) => (param: CreateModuleParam) => {
   const { destination: audioContext } = state.modules.find((module) => module.brand === 'speaker_out') as SpeakerOut;
   const module = createModule(param, audioContext);
   state.modules = [...state.modules, module];
 }
 
-export const onDeleteLinkHandler = (state: AudiOtterState) => (linkId: string) => {
-  const deleteLink = state.linkMap.get(linkId);
+export const onDeleteModuleHandler = (state: AudiOtterState) => (moduleId: string) => {
+  const deleteModule = state.modules.find((m) => m.id === moduleId);
+  if (isSourceModule(deleteModule)) {
+    Array.from(state.linkMap)
+      .filter(([_, l]) => l.sourceId === moduleId || l.destinationId === moduleId)
+      .forEach(([_, l]) => deleteLink(state, l))
+    state.modules = state.modules.filter((m) => m.id !== deleteModule.id)
+    state.selectedItems = []
+  }
+}
+
+const deleteLink = (state: AudiOtterState, deleteLink: Link) => {
   const srcModule = state.modules.find((module) => module.id === deleteLink?.sourceId);
   const desModule = state.modules.find((module) => module.id === deleteLink?.destinationId);
   if (isSourceModule(srcModule) && desModule) {
     srcModule.destinationIds = srcModule.destinationIds.filter((id) => id !== deleteLink?.destinationId);
     disconnect(srcModule, desModule)
-    state.linkMap.delete(linkId);
+    state.linkMap.delete(deleteLink.id);
   }
   state.linkMap = new Map(state.linkMap);
   state.selectedItems = []
+}
+
+export const onDeleteLinkHandler = (state: AudiOtterState) => (linkId: string) => {
+  const link = state.linkMap.get(linkId);
+  if (link) {
+    deleteLink(state, link);
+  }
 };

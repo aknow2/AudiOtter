@@ -1,4 +1,4 @@
-import { computed, readonly, ref } from "vue"
+import { readonly, ref } from "vue"
 import { AudiOtterState, ModuleBrand, Position } from "./types"
 import { canCreateLink, connectModules, createLinkId, createModuleCreator } from "./module_updater"
 
@@ -38,20 +38,20 @@ const toggleSelectedItem = (state: AudiOtterState, itemId: string | undefined) =
 };
 export const createDefaultIntractiveTool = (state: AudiOtterState): IntractiveTool  => ({
   onDown(ev) {
-    state.draggingItem = ev.itemId
+    state.draggingItem = ev.itemId;
   },
   onMove(ev) {
     if (state.draggingItem) {
-      updateModulePosition(state, ev.position, ev.itemId)
+      updateModulePosition(state, ev.position, state.draggingItem);
     }
   },
   onUp(ev) {
-    console.log('dragging', state.draggingItem)
+    console.log('dragging', state.draggingItem);
     if (state.draggingItem) {
-      updateModulePosition(state, ev.position, state.draggingItem)
-      state.draggingItem = undefined
+      updateModulePosition(state, ev.position, state.draggingItem);
+      state.draggingItem = undefined;
     }
-    toggleSelectedItem(state, ev.itemId)
+    toggleSelectedItem(state, ev.itemId);
   },
 })
 
@@ -103,14 +103,14 @@ export const createConnectingModuleTool = (state: AudiOtterState): IntractiveToo
 };
 
 export const createCreateModuleTool = (param: CreateModuleToolParam) => (state: AudiOtterState): IntractiveTool  => {
-  const moduleCreator = createModuleCreator(state)
+  const create = createModuleCreator(state)
   return {
     onDown() {},
     onMove() {},
     onUp({ itemId, position }) {
       if (itemId) return;
       const [x, y] = position
-      moduleCreator({
+      create({
         type: param.type,
         x,
         y,
@@ -118,7 +118,6 @@ export const createCreateModuleTool = (param: CreateModuleToolParam) => (state: 
     },   
   }
 }
-
 
 interface ConnectingModuleToolParam {
   type: 'cable'
