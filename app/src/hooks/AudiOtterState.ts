@@ -64,8 +64,8 @@ const loadModules = async () => {
 
 const buildModuleAndLink = (modules: Module[]): LinkMap => {
   const linkMap = new Map();
-  for (const destinationModule of modules) {
-    connectModules(destinationModule, modules, linkMap);
+  for (const outModule of modules) {
+    connectModules(outModule, modules, linkMap);
   }
   return linkMap
 }

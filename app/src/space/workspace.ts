@@ -14,6 +14,7 @@ const moduleLabels: ModuleLabels = {
   'biquad_filter': 'Biquad',
   'delay': 'Delay',
   'speaker_out': 'Speaker',
+  'gain': 'Gain',
 }
 
 type ModuleColors = {
@@ -144,12 +145,12 @@ const drawLinks = (
   const links = new PIXI.Container();
   linkMap.forEach((link, key) => {
     const { sourceId, destinationId } = link;
-    const sourceModule = modules.find((module) => module.id === sourceId);
-    const destinationModule = modules.find((module) => module.id === destinationId);
-    if (sourceModule && destinationModule) {
+    const connectableModule = modules.find((module) => module.id === sourceId);
+    const outModule = modules.find((module) => module.id === destinationId);
+    if (connectableModule && outModule) {
       const linkContainer = new PIXI.Container();
-      const source = sourceModule.position;
-      const destination = destinationModule.position;
+      const source = connectableModule.position;
+      const destination = outModule.position;
       const line = new PIXI.Graphics();
       const selected = !!state.selectedItems.find((item) => item === key);
       drawLine(line, source, destination, selected);

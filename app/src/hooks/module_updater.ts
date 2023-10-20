@@ -1,24 +1,24 @@
 import { nanoid } from "nanoid";
-import { BiquadFilter, Delay, DestinationModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, SourceModule, SpeakerOut, ModuleParam, BiquadFilterParam, DelayParam, UpdateModuleEvent } from "./types";
+import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, SpeakerOut, UpdateModuleEvent, Gain } from "./types";
 
-const isSourceModule = (module: Module|undefined): module is SourceModule => {
-  return module?.brand === 'mic_in' || module?.brand === 'biquad_filter' || module?.brand === 'delay';
+const isConnectableModule = (module: Module|undefined): module is ConnectableModule => {
+  return module?.brand === 'mic_in' || module?.brand === 'biquad_filter' || module?.brand === 'delay' || module?.brand === 'gain';
 }
 
-const isDestinationModule = (module: Module|undefined): module is DestinationModule => {
+const isOutModule = (module: Module|undefined): module is OutModule => {
   return module?.brand === 'speaker_out';
 }
 
 export const createLinkId = (srcModule: Module, desModule: Module) => `${srcModule.id}-${desModule.id}`
 
-export const canCreateLink = (linkMap: LinkMap, srcModule: Module, desModule: Module, linkId: string): srcModule is SourceModule => {
+export const canCreateLink = (linkMap: LinkMap, srcModule: Module, desModule: Module, linkId: string): srcModule is ConnectableModule => {
   if (linkMap.has(linkId) || srcModule.id === desModule.id) {
     return false;
   }
-  return isSourceModule(srcModule)
+  return isConnectableModule(srcModule)
 }
 
-export const createLink = (srcModule: SourceModule, desModule: Module, linkId: string): Link => {
+export const createLink = (srcModule: ConnectableModule, desModule: Module, linkId: string): Link => {
   return {
     brand: 'link',
     id: linkId,
@@ -27,8 +27,8 @@ export const createLink = (srcModule: SourceModule, desModule: Module, linkId: s
   };
 }
 
-const connect = (srcModule: SourceModule, desModule: Module) => {
-  if (isDestinationModule(desModule)) {
+const connect = (srcModule: ConnectableModule, desModule: Module) => {
+  if (isOutModule(desModule)) {
     srcModule.source.connect(desModule.destination.destination);
   } else {
     srcModule.source.connect(desModule.source);
@@ -54,8 +54,8 @@ export const connectModules = (srcModule: Module, modules: Module[], linkMap: Ma
   }
 }
 
-const disconnect = (srcModule: SourceModule, desModule: Module) => {
-  if (isSourceModule(desModule)) {
+const disconnect = (srcModule: ConnectableModule, desModule: Module) => {
+  if (isConnectableModule(desModule)) {
     srcModule.source.disconnect(desModule.source)
   } else {
     srcModule.source.disconnect(desModule.destination.destination)
@@ -69,7 +69,6 @@ interface CreateModuleParam {
 }
 const createDelay = (audioContext: AudioContext, param: CreateModuleParam): Delay => {
   const delay = audioContext.createDelay(10)
-  delay.delayTime.value = 1
   return {
     id: nanoid(),
     brand: 'delay',
@@ -84,9 +83,6 @@ const createDelay = (audioContext: AudioContext, param: CreateModuleParam): Dela
 
 const createBiquadFilter = (audioContext: AudioContext, param: CreateModuleParam): BiquadFilter => {
   const filter = audioContext.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 700;
-  filter.Q.value = 1;
 
   return {
     id: nanoid(),
@@ -100,8 +96,22 @@ const createBiquadFilter = (audioContext: AudioContext, param: CreateModuleParam
   }
 }
 
+const createGainModule = (audioContext: AudioContext, param: CreateModuleParam): Gain => {
+  const gain = audioContext.createGain();
+  return {
+    id: nanoid(),
+    brand: 'gain',
+    position: {
+      x: param.x,
+      y: param.y,
+    },
+    destinationIds: [],
+    source: gain,
+  }
+}
 
-const updateSourceModule = ({ brand, module, param }: UpdateModuleEvent) => {
+
+const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent) => {
   switch (brand) {
     case 'delay':
       module.source.delayTime.value = param.delayTime;
@@ -110,6 +120,10 @@ const updateSourceModule = ({ brand, module, param }: UpdateModuleEvent) => {
       module.source.type = param.type;
       module.source.frequency.value = param.frequency;
       module.source.Q.value = param.Q;
+      module.source.gain.value = param.gain;
+      break;
+    case 'gain':
+      module.source.gain.value = param.gain;
       break;
     default:
       throw new Error('not support')
@@ -122,6 +136,8 @@ const createModule = (param: CreateModuleParam, audioContext: AudioContext): Mod
       return createDelay(audioContext, param);
     case 'biquad_filter':
       return createBiquadFilter(audioContext, param);
+    case 'gain':
+      return createGainModule(audioContext, param);
     default:
       throw new Error('not support')
   }
@@ -129,7 +145,7 @@ const createModule = (param: CreateModuleParam, audioContext: AudioContext): Mod
 
 export const createModuleUpdater = (state: AudiOtterState) => (ev: UpdateModuleEvent) => {
   const { module } = ev;
-  updateSourceModule(ev);
+  updateConnectableModule(ev);
   state.modules = state.modules.map((m) => {
     if (m.id === module.id) {
       return module;
@@ -146,7 +162,7 @@ export const createModuleCreator = (state: AudiOtterState) => (param: CreateModu
 
 export const onDeleteModuleHandler = (state: AudiOtterState) => (moduleId: string) => {
   const deleteModule = state.modules.find((m) => m.id === moduleId);
-  if (isSourceModule(deleteModule)) {
+  if (isConnectableModule(deleteModule)) {
     Array.from(state.linkMap)
       .filter(([_, l]) => l.sourceId === moduleId || l.destinationId === moduleId)
       .forEach(([_, l]) => deleteLink(state, l))
@@ -158,7 +174,7 @@ export const onDeleteModuleHandler = (state: AudiOtterState) => (moduleId: strin
 const deleteLink = (state: AudiOtterState, deleteLink: Link) => {
   const srcModule = state.modules.find((module) => module.id === deleteLink?.sourceId);
   const desModule = state.modules.find((module) => module.id === deleteLink?.destinationId);
-  if (isSourceModule(srcModule) && desModule) {
+  if (isConnectableModule(srcModule) && desModule) {
     srcModule.destinationIds = srcModule.destinationIds.filter((id) => id !== deleteLink?.destinationId);
     disconnect(srcModule, desModule)
     state.linkMap.delete(deleteLink.id);

@@ -1,11 +1,12 @@
 <template>
   <div class="w-full">
     <div class="mb-4 flex justify-between">
-      <span class=" text-gray-100 text-2xl"> Delay </span>
+      <span class=" text-gray-100 text-2xl"> Gain </span>
       <ContainButton color="delete" @click="() => props.onDelete(props.item.id)" > Delete </ContainButton>
     </div>
     <div>
-      <RangeSlider :step="0.1" :min="0.1" :max="10" :on-change="(n) => onUpdate('delayTime', n) " :value="param.delayTime" :label="`Delay time ${param.delayTime}`" />
+      <RangeSlider :step="0.01" :min="0" :max="20" :on-change="(n) => onUpdate('gain', n) " :value="param.gain"
+          :label="`Gain ${param.gain}`" />
     </div>
   </div>
 </template>
@@ -14,22 +15,22 @@ import { defineProps } from 'vue'
 import ContainButton from '../ContainButton.vue';
 import RangeSlider from '../RangeSlider.vue';
 import useConnectableModuleEditor from './hooks';
-import { Delay, UpdateModuleEvent } from '../../hooks/types';
+import { Gain, UpdateModuleEvent } from '../../hooks/types';
 
 const props = defineProps<{
-  item: Delay,
+  item: Gain,
   onDelete: (id: string) => void,
   onChange: (event: UpdateModuleEvent) => void,
 }>();
 
 const { param, onUpdate } = useConnectableModuleEditor({
-  brand: 'delay',
+  brand: 'gain',
   module: props.item,
   param: {
-    delayTime: props.item.source.delayTime.value,
-    maxDelayTime: 10, // Read only property
+    gain: props.item.source.gain.value,
   }
 }, props.onChange);
 
 </script>
+
 

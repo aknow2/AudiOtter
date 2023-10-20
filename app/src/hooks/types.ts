@@ -27,25 +27,29 @@ export interface Delay extends BaseModule {
 }
 export type DelayParam = BaseModuleParam<DelayOptions>
 
-export type ModuleParam = BiquadFilterParam | DelayParam;
+export interface Gain extends BaseModule {
+  brand: 'gain';
+  source: GainNode;
+}
+export type GainParam = BaseModuleParam<GainOptions>
 
-export type InOutModule =  BiquadFilter | Delay;
-export type SourceModule = MicIn | BiquadFilter | Delay;
+export type ModuleParam = BiquadFilterParam | DelayParam | GainParam;
+
+export type InOutModule =  BiquadFilter | Delay | Gain;
+export type InModule = MicIn;
+export type ConnectableModule = InModule | InOutModule;
 
 
-export interface UpdateBiquadFilterEvent {
-  brand: 'biquad_filter';
-  module: BiquadFilter;
-  param: BiquadFilterParam;
+type BaseUpdateModuleEvent<T extends Module, P extends ModuleParam> = { 
+  brand: T['brand'];
+  module: T;
+  param: P;
 }
 
-export interface UpdateDelayEvent {
-  brand: 'delay';
-  module: Delay;
-  param: DelayParam;
-}
-
-export type UpdateModuleEvent = UpdateBiquadFilterEvent | UpdateDelayEvent;
+export type UpdateBiquadFilterEvent = BaseUpdateModuleEvent<BiquadFilter, BiquadFilterParam>
+export type UpdateDelayEvent = BaseUpdateModuleEvent<Delay, DelayParam>
+export type UpdateGainEvent = BaseUpdateModuleEvent<Gain, GainParam>
+export type UpdateModuleEvent = UpdateBiquadFilterEvent | UpdateDelayEvent | UpdateGainEvent;
 
 
 export interface SpeakerOut extends BaseModule {
@@ -69,13 +73,13 @@ export interface LineFeedback {
 
 export type Feedback = LineFeedback;
 
-export type DestinationModule = SpeakerOut;
+export type OutModule = SpeakerOut;
 
-export type DestinationBrand = DestinationModule['brand'];
-export type SourceBrand = SourceModule['brand'];
-export type ModuleBrand = DestinationBrand | SourceBrand;
+export type OutBrand = OutModule['brand'];
+export type SourceBrand = ConnectableModule['brand'];
+export type ModuleBrand = OutBrand | SourceBrand;
 
-export type Module = SourceModule | DestinationModule;
+export type Module = ConnectableModule | OutModule;
 export type Item = Module | Link;
 export type Status = 'title' | 'loading' | 'running';
 export type LinkMap = Map<string, Link>;

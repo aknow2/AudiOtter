@@ -26,7 +26,7 @@ import { defineProps } from 'vue'
 import ContainButton from '../ContainButton.vue';
 import RangeSlider from '../RangeSlider.vue';
 import Dropdown from '../Dropdown.vue';
-import useSourceModuleEditor from './composition';
+import useConnectableModuleEditor from './hooks';
 import { BiquadFilter, UpdateModuleEvent } from '../../hooks/types';
 
 const filterTypes: BiquadFilter['source']['type'][] = [
@@ -46,7 +46,7 @@ const props = defineProps<{
   onChange: (event: UpdateModuleEvent) => void,
 }>();
 
-const { param, onUpdate } = useSourceModuleEditor({
+const { param, onUpdate } = useConnectableModuleEditor({
   brand: 'biquad_filter',
   module: props.item,
   param: {

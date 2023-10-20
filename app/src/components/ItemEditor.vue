@@ -10,6 +10,9 @@
       <template v-else-if="selectedItem?.brand === 'delay'">
         <Delay :on-change="updateModuleEvent" :item="selectedItem" :on-delete="onDeleteModule" />
       </template>
+      <template v-else-if="selectedItem?.brand === 'gain'">
+        <Gain :on-change="updateModuleEvent" :item="selectedItem" :on-delete="onDeleteModule" />
+      </template>
       <template v-else>
         <Palette />
       </template>
@@ -24,6 +27,7 @@ import LinkEditor from './editors/Link.vue';
 import BiquadEditor from './editors/Biquad.vue';
 import Palette from './Palette.vue';
 import Delay from './editors/Delay.vue';
+import Gain from './editors/Gain.vue';
 
 const { selectedItem, onDeleteLink, onDeleteModule, getMutableState } = inject(lynreSynthKey) as AudiOtterComposition
 const updateModuleEvent = createModuleUpdater(getMutableState());

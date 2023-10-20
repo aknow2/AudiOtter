@@ -14,7 +14,7 @@ const createUpdater = <T extends UpdateModuleEvent>(ev: T, onChange: (ev: T) => 
     param: refParam.value,
   } as T)
 }
-const useSourceModuleEditor = <T extends UpdateModuleEvent>(event: T, onChange: (ev: T) => void) => {
+const useConnectableModuleEditor = <T extends UpdateModuleEvent>(event: T, onChange: (ev: T) => void) => {
   const param = ref<T['param']>(event.param);
   const onUpdate = createUpdater(event, onChange)(param);
   return {
@@ -23,4 +23,4 @@ const useSourceModuleEditor = <T extends UpdateModuleEvent>(event: T, onChange: 
   }
 }
 
-export default useSourceModuleEditor
+export default useConnectableModuleEditor

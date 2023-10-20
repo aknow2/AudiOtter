@@ -1,5 +1,5 @@
 import { readonly, ref } from "vue"
-import { AudiOtterState, ModuleBrand, Position } from "./types"
+import { AudiOtterState, Module, ModuleBrand, Position } from "./types"
 import { canCreateLink, connectModules, createLinkId, createModuleCreator } from "./module_updater"
 
 interface IntractiveEvent {
@@ -36,7 +36,7 @@ const toggleSelectedItem = (state: AudiOtterState, itemId: string | undefined) =
     state.selectedItems = [itemId];
   }
 };
-export const createDefaultIntractiveTool = (state: AudiOtterState): IntractiveTool  => ({
+export const createDefaultIntractiveTool = ({ state }: ToolContext): IntractiveTool  => ({
   onDown(ev) {
     state.draggingItem = ev.itemId;
   },
@@ -55,15 +55,12 @@ export const createDefaultIntractiveTool = (state: AudiOtterState): IntractiveTo
   },
 })
 
-const createFeedbackIfDetectModule = (itemId: string | undefined, state: AudiOtterState) => {
-  const module = state.modules.find((m) => m.id === itemId)
-  if (module) {
-    state.feedBack = {
-      brand: 'line',
-      srcId: module.id,
-      src: module.position,
-      des: module.position,
-    }
+const createFeedback = (module: Module, state: AudiOtterState) => {
+  state.feedBack = {
+    brand: 'line',
+    srcId: module.id,
+    src: module.position,
+    des: module.position,
   }
 }
 
@@ -77,10 +74,13 @@ const updateFeedbackIfExist = (position: Position, state: AudiOtterState) => {
   }
 }
 
-export const createConnectingModuleTool = (state: AudiOtterState): IntractiveTool  => {
+export const createConnectingModuleTool = ({state}: ToolContext): IntractiveTool  => {
   return {
     onDown(ev) {
-      createFeedbackIfDetectModule(ev.itemId, state);
+      const module = state.modules.find((m) => m.id === ev.itemId)
+      if (module){
+        createFeedback(module, state);
+      }
     },
     onMove({ position }) {
       console.log('on move', position)
@@ -98,11 +98,12 @@ export const createConnectingModuleTool = (state: AudiOtterState): IntractiveToo
         }
       }
       state.feedBack = undefined
+      toggleSelectedItem(state, itemId);
     },
   }
 };
 
-export const createCreateModuleTool = (param: CreateModuleToolParam) => (state: AudiOtterState): IntractiveTool  => {
+export const createCreateModuleTool = (param: CreateModuleToolParam) => ({ state, changeTool }: ToolContext): IntractiveTool  => {
   const create = createModuleCreator(state)
   return {
     onDown() {},
@@ -115,6 +116,7 @@ export const createCreateModuleTool = (param: CreateModuleToolParam) => (state: 
         x,
         y,
       })
+      changeTool({ type: 'default' })
     },   
   }
 }
@@ -139,22 +141,33 @@ const createToolCreator = (param: CreateToolParam) => {
       return createConnectingModuleTool
     case 'delay':
     case 'biquad_filter':
+    case 'gain':
       return createCreateModuleTool(param)
     default:
       return createDefaultIntractiveTool
   }
 }
 
+interface ToolContext {
+  changeTool: (param: CreateToolParam) => void
+  state: AudiOtterState
+}
 export const useIntractiveTool = (state: AudiOtterState) => {
   const selectedPalette = ref<PaletteType>('default')
-  const tool = ref<IntractiveTool>(createDefaultIntractiveTool(state))
+
+  const changeTool = (param: CreateToolParam) => {
+    selectedPalette.value = param.type
+    tool.value = createToolCreator(param)(toolContext)
+  }
+  const toolContext: ToolContext = {
+    changeTool,
+    state,
+  }
+  const tool = ref<IntractiveTool>(createDefaultIntractiveTool(toolContext))
 
   return {
     tool,
     selectedPalette: readonly(selectedPalette),
-    changeTool: (param: CreateToolParam) => {
-      selectedPalette.value = param.type;
-      tool.value = createToolCreator(param)(state)
-    },
+    changeTool: toolContext.changeTool,
   }
 }
