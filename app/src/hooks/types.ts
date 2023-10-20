@@ -3,7 +3,8 @@ export interface Position {
   y: number;
 }
 
-type BaseModuleParam<T extends AudioNodeOptions> = Omit<Required<T>,'channelCount' | 'channelCountMode' | 'channelInterpretation'> 
+type BaseModuleParam<T extends AudioNodeOptions, O extends keyof T = never> = Omit<
+  Required<T>,'channelCount' | 'channelCountMode' | 'channelInterpretation' | O> 
 export interface BaseModule {
   id: string;
   position: Position;
@@ -14,6 +15,12 @@ export interface MicIn extends BaseModule {
   brand: 'mic_in';
   source: MediaStreamAudioSourceNode;
 }
+
+type AudioParamKeys<T> = {
+    [K in keyof T]: T[K] extends AudioParam ? K : never;
+}[keyof T];
+
+export type BiquadFilterNodeAudioParamKeys = AudioParamKeys<BiquadFilterNode>;
 
 export interface BiquadFilter extends BaseModule {
   brand: 'biquad_filter';
@@ -33,9 +40,18 @@ export interface Gain extends BaseModule {
 }
 export type GainParam = BaseModuleParam<GainOptions>
 
-export type ModuleParam = BiquadFilterParam | DelayParam | GainParam;
+export interface Oscillator extends BaseModule {
+  brand: 'oscillator';
+  source: OscillatorNode;
+  isPlaying: boolean;
+}
+export type OscillatorParam = BaseModuleParam<OscillatorOptions, 'periodicWave'> & {
+  isPlaying: boolean;
+}
 
-export type InOutModule =  BiquadFilter | Delay | Gain;
+export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam;
+
+export type InOutModule =  BiquadFilter | Delay | Gain | MicIn | Oscillator;
 export type InModule = MicIn;
 export type ConnectableModule = InModule | InOutModule;
 
@@ -49,7 +65,11 @@ type BaseUpdateModuleEvent<T extends Module, P extends ModuleParam> = {
 export type UpdateBiquadFilterEvent = BaseUpdateModuleEvent<BiquadFilter, BiquadFilterParam>
 export type UpdateDelayEvent = BaseUpdateModuleEvent<Delay, DelayParam>
 export type UpdateGainEvent = BaseUpdateModuleEvent<Gain, GainParam>
-export type UpdateModuleEvent = UpdateBiquadFilterEvent | UpdateDelayEvent | UpdateGainEvent;
+export type UpdateOscillatorEvent = BaseUpdateModuleEvent<Oscillator, OscillatorParam>
+export type UpdateModuleEvent = UpdateBiquadFilterEvent
+  | UpdateDelayEvent
+  | UpdateGainEvent 
+  | UpdateOscillatorEvent;
 
 
 export interface SpeakerOut extends BaseModule {

@@ -18,6 +18,7 @@ import CableIcon from '../assets/icons/cable.svg'
 import DelayIcon from '../assets/icons/delay.svg'
 import BiquadIcon from '../assets/icons/biquad.svg'
 import GainIcon from '../assets/icons/gain.svg'
+import OscillatorIcon from '../assets/icons/oscillator.svg'
 import { CreateToolParam } from '../hooks/intractive_tool';
 
 const { selectedPalette, changeTool } = inject(lynreSynthKey) as AudiOtterComposition
@@ -57,6 +58,13 @@ const createPatteItemData = (param:  CreateToolParam) => {
         label: 'Gain',
         pressed: selected
       }
+    case 'oscillator': 
+      return {
+        icon: OscillatorIcon,
+        onClick: () => changeTool(selected ? defaultToolParam : param),
+        label: 'Osc.',
+        pressed: selected
+      }
     default:
       throw new Error('invalid type')
   }
@@ -68,6 +76,7 @@ const items = computed(() => {
     createPatteItemData({ type: 'delay'}),
     createPatteItemData({ type: 'biquad_filter'}),
     createPatteItemData({ type: 'gain'}),
+    createPatteItemData({ type: 'oscillator'}),
   ]
 })
 

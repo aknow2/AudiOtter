@@ -13,6 +13,9 @@
       <template v-else-if="selectedItem?.brand === 'gain'">
         <Gain :on-change="updateModuleEvent" :item="selectedItem" :on-delete="onDeleteModule" />
       </template>
+      <template v-else-if="selectedItem?.brand === 'oscillator'">
+        <Oscillator :on-change="updateModuleEvent" :item="selectedItem" :on-delete="onDeleteModule" />
+      </template>
       <template v-else>
         <Palette />
       </template>
@@ -28,6 +31,7 @@ import BiquadEditor from './editors/Biquad.vue';
 import Palette from './Palette.vue';
 import Delay from './editors/Delay.vue';
 import Gain from './editors/Gain.vue';
+import Oscillator from './editors/Oscillator.vue';
 
 const { selectedItem, onDeleteLink, onDeleteModule, getMutableState } = inject(lynreSynthKey) as AudiOtterComposition
 const updateModuleEvent = createModuleUpdater(getMutableState());

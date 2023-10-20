@@ -22,9 +22,6 @@ const loadModules = async () => {
   }
 
   const lowpassFilter = audioContext.createBiquadFilter();
-  lowpassFilter.type = 'lowpass';
-  lowpassFilter.frequency.value = 300;
-  lowpassFilter.Q.value = 1; 
   const quadFilter: BiquadFilter = {
     id: nanoid(),
     brand: 'biquad_filter',
@@ -37,7 +34,6 @@ const loadModules = async () => {
   }
 
   const delay = audioContext.createDelay(10)
-  delay.delayTime.value = 1
   const delayModule: Delay = {
     id: nanoid(),
     brand: 'delay',

@@ -19,7 +19,6 @@ const change = (ev: Event) => {
     return;
   }
   const num = Number(ev.target.value)
-  console.log(num, ev.target.value)
   if (isFinite(num) && !isNaN(num) ) {
     props.onChange(num) 
   }

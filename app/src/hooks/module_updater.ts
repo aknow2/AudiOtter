@@ -1,8 +1,12 @@
 import { nanoid } from "nanoid";
-import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, SpeakerOut, UpdateModuleEvent, Gain } from "./types";
+import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, SpeakerOut, UpdateModuleEvent, Gain, Oscillator } from "./types";
 
 const isConnectableModule = (module: Module|undefined): module is ConnectableModule => {
-  return module?.brand === 'mic_in' || module?.brand === 'biquad_filter' || module?.brand === 'delay' || module?.brand === 'gain';
+  return module?.brand === 'mic_in'
+    || module?.brand === 'biquad_filter'
+    || module?.brand === 'delay'
+    || module?.brand === 'gain'
+    || module?.brand === 'oscillator';
 }
 
 const isOutModule = (module: Module|undefined): module is OutModule => {
@@ -110,8 +114,23 @@ const createGainModule = (audioContext: AudioContext, param: CreateModuleParam):
   }
 }
 
+const createOscillator = (audioContext: AudioContext, param: CreateModuleParam): Oscillator => {
+  const oscillator = audioContext.createOscillator();
+  return {
+    id: nanoid(),
+    brand: 'oscillator',
+    position: {
+      x: param.x,
+      y: param.y,
+    },
+    isPlaying: false,
+    destinationIds: [],
+    source: oscillator,
+  }
+}
 
-const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent) => {
+
+const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, state: AudiOtterState) => {
   switch (brand) {
     case 'delay':
       module.source.delayTime.value = param.delayTime;
@@ -124,6 +143,29 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent) =>
       break;
     case 'gain':
       module.source.gain.value = param.gain;
+      break;
+    case 'oscillator':
+      console.log(param.isPlaying, module.isPlaying)
+      if (module.isPlaying === param.isPlaying) {
+        module.source.type = param.type;
+        module.source.frequency.value = param.frequency;
+        module.source.detune.value = param.detune;
+        return;
+      }
+      module.isPlaying = param.isPlaying;
+      if (param.isPlaying) {
+        module.source.start();
+      } else {
+        module.source.stop();
+        module.source = module.source.context.createOscillator();
+        const destinations = state.modules.filter((m) => module.destinationIds.find((id) => id === m.id));
+        destinations.forEach((des) => {
+          connect(module, des);
+        });
+        module.source.type = param.type;
+        module.source.frequency.value = param.frequency;
+        module.source.detune.value = param.detune;
+      }
       break;
     default:
       throw new Error('not support')
@@ -138,6 +180,8 @@ const createModule = (param: CreateModuleParam, audioContext: AudioContext): Mod
       return createBiquadFilter(audioContext, param);
     case 'gain':
       return createGainModule(audioContext, param);
+    case 'oscillator':
+      return createOscillator(audioContext, param);
     default:
       throw new Error('not support')
   }
@@ -145,7 +189,7 @@ const createModule = (param: CreateModuleParam, audioContext: AudioContext): Mod
 
 export const createModuleUpdater = (state: AudiOtterState) => (ev: UpdateModuleEvent) => {
   const { module } = ev;
-  updateConnectableModule(ev);
+  updateConnectableModule(ev, state);
   state.modules = state.modules.map((m) => {
     if (m.id === module.id) {
       return module;

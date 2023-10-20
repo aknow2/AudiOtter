@@ -46,7 +46,6 @@ export const createDefaultIntractiveTool = ({ state }: ToolContext): IntractiveT
     }
   },
   onUp(ev) {
-    console.log('dragging', state.draggingItem);
     if (state.draggingItem) {
       updateModulePosition(state, ev.position, state.draggingItem);
       state.draggingItem = undefined;
@@ -83,7 +82,6 @@ export const createConnectingModuleTool = ({state}: ToolContext): IntractiveTool
       }
     },
     onMove({ position }) {
-      console.log('on move', position)
       updateFeedbackIfExist({ x: position[0], y: position[1] }, state);
     },
     onUp({ itemId }) {
@@ -141,6 +139,7 @@ const createToolCreator = (param: CreateToolParam) => {
       return createConnectingModuleTool
     case 'delay':
     case 'biquad_filter':
+    case 'oscillator':
     case 'gain':
       return createCreateModuleTool(param)
     default:

@@ -15,6 +15,7 @@ const moduleLabels: ModuleLabels = {
   'delay': 'Delay',
   'speaker_out': 'Speaker',
   'gain': 'Gain',
+  'oscillator': 'Osc.'
 }
 
 type ModuleColors = {
@@ -22,6 +23,7 @@ type ModuleColors = {
 }
 const moduleFillColors: ModuleColors = {
   'mic_in': 0xF288C2,
+  'oscillator': 0xF288C2,
   'speaker_out': 0xF25D27,
 }
 
@@ -163,7 +165,7 @@ const drawLinks = (
 
       linkContainer.eventMode = 'dynamic';
       linkContainer.on('pointerup', (ev) => {
-        console.log('pointerdown');
+        ('pointerdown');
         tool.onUp({
           position: [ev.global.x, ev.global.y],
           itemId: key,
@@ -231,7 +233,6 @@ const createWorkspace = (view: HTMLCanvasElement): Workspace => {
     update: (composition: AudiOtterComposition) => {
       const { state, tool } = composition;
       const { feedBack } = state;
-      console.log('update', state);
       pixiApp.stage.removeChildren();
 
       if (feedBack) {
