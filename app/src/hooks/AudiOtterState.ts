@@ -2,7 +2,7 @@ import { nanoid } from "nanoid";
 import { InjectionKey, computed, reactive, readonly} from "vue"
 import { BiquadFilter, Delay, Item, LinkMap, AudiOtterState, MicIn, Module, SpeakerOut } from "./types";
 import { useIntractiveTool } from "./intractive_tool";
-import { connectModules, onDeleteLinkHandler, onDeleteModuleHandler } from "./module_updater";
+import { changeDestination, connectModules, onDeleteLinkHandler, onDeleteModuleHandler } from "./module_updater";
 
 const loadModules = async () => {
   const mediaStreamStream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -17,8 +17,8 @@ const loadModules = async () => {
       x: 200,
       y: 150,
     },
-    destinationIds: [],
-    destination: audioContext,
+    destinations: [],
+    context: audioContext,
   }
 
   const lowpassFilter = audioContext.createBiquadFilter();
@@ -29,7 +29,7 @@ const loadModules = async () => {
       x: 250,
       y: 50,
     },
-    destinationIds: [speakerOut.id],
+    destinations: [{ target: 'node', id: speakerOut.id }],
     source: lowpassFilter,
   }
 
@@ -41,7 +41,7 @@ const loadModules = async () => {
       x: 150,
       y: 50,
     },
-    destinationIds: [quadFilter.id],
+    destinations: [{ target: 'node', id: quadFilter.id }],
     source: delay,
   }
 
@@ -52,7 +52,7 @@ const loadModules = async () => {
       x: 50,
       y: 50,
     },
-    destinationIds: [speakerOut.id, delayModule.id],
+    destinations: [{ target: 'node', id: speakerOut.id }, { target: 'node', id: delayModule.id }],
     source: mediaStreamSource,
   }
   return [micIn, speakerOut, quadFilter, delayModule];
@@ -92,6 +92,7 @@ const useAudiOtter = () => {
     }),
     onDeleteLink: onDeleteLinkHandler(mutableState),
     onDeleteModule: onDeleteModuleHandler(mutableState),
+    onChangeModuleDestination: changeDestination(mutableState),
     tool,
     init,
     selectedPalette,
@@ -100,5 +101,5 @@ const useAudiOtter = () => {
 };
 
 export type AudiOtterComposition = ReturnType<typeof useAudiOtter>;
-export const lynreSynthKey = Symbol('lynreSynth') as InjectionKey<AudiOtterComposition>;
+export const audioOtterStateKey = Symbol('lynreSynth') as InjectionKey<AudiOtterComposition>;
 export default useAudiOtter;

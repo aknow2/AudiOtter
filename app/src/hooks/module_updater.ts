@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
-import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, SpeakerOut, UpdateModuleEvent, Gain, Oscillator } from "./types";
+import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, SpeakerOut, UpdateModuleEvent, Gain, Oscillator, DestinationInfo } from "./types";
 
-const isConnectableModule = (module: Module|undefined): module is ConnectableModule => {
+export const isConnectableModule = (module: Module|undefined): module is ConnectableModule => {
   return module?.brand === 'mic_in'
     || module?.brand === 'biquad_filter'
     || module?.brand === 'delay'
@@ -30,41 +30,50 @@ export const createLink = (srcModule: ConnectableModule, desModule: Module, link
     destinationId: desModule.id,
   };
 }
+const getDestination = (node: AudioNode, desInfo: DestinationInfo) => {
+  if (desInfo.target === 'node') {
+    return node;
+  }
+  // fix me: Using Any, Not typesafe and it's not cool.
+  return (node as any)[desInfo.paramKey] as any;
+}
 
-const connect = (srcModule: ConnectableModule, desModule: Module) => {
+const connect = (srcModule: ConnectableModule, desModule: Module, desInfo: DestinationInfo) => {
   if (isOutModule(desModule)) {
-    srcModule.source.connect(desModule.destination.destination);
+    srcModule.source.connect(getDestination(desModule.context.destination, desInfo));
   } else {
-    srcModule.source.connect(desModule.source);
+    const des =  getDestination(desModule.source, desInfo)
+    srcModule.source.connect(des);
   }
 }
 
-const findDesModules = (srcModule: Module, modules: Module[])=>
-     modules.filter((module) => srcModule.destinationIds.find((id) => id === module.id));
+const disconnect = (srcModule: ConnectableModule, desModule: Module, desInfo: DestinationInfo) => {
+  if (isConnectableModule(desModule)) {
+    srcModule.source.disconnect(getDestination(desModule.source, desInfo))
+  } else {
+    srcModule.source.disconnect(getDestination(desModule.context.destination, desInfo))
+  }
+}
 
-export const connectModuleProcess = (srcModule: Module, desModule: Module, linkMap: Map<string, Link>) => {
+export const connectModuleProcess = (srcModule: Module, desModule: Module, destination: DestinationInfo, linkMap: Map<string, Link>) => {
   const linkId = createLinkId(srcModule, desModule);
   if (canCreateLink(linkMap, srcModule, desModule, linkId)) {
     const link = createLink(srcModule, desModule, linkId)
     linkMap.set(link.id, link)
-    connect(srcModule, desModule)
+    connect(srcModule, desModule, destination)
   }
 }
 
 export const connectModules = (srcModule: Module, modules: Module[], linkMap: Map<string, Link>) => {
-  const desModules = findDesModules(srcModule, modules);
-  for (const desModule of desModules) {
-    connectModuleProcess(srcModule, desModule, linkMap);
-  }
+  srcModule.destinations.forEach((destination) => {
+    const desModule = modules.find((m) => m.id === destination.id);
+    if (desModule) {
+      connectModuleProcess(srcModule, desModule, destination, linkMap);
+    }
+  })
 }
 
-const disconnect = (srcModule: ConnectableModule, desModule: Module) => {
-  if (isConnectableModule(desModule)) {
-    srcModule.source.disconnect(desModule.source)
-  } else {
-    srcModule.source.disconnect(desModule.destination.destination)
-  }
-}
+
 
 interface CreateModuleParam {
   x: number;
@@ -80,7 +89,7 @@ const createDelay = (audioContext: AudioContext, param: CreateModuleParam): Dela
       x: param.x,
       y: param.y,
     },
-    destinationIds: [],
+    destinations: [],
     source: delay,
   }
 }
@@ -95,7 +104,7 @@ const createBiquadFilter = (audioContext: AudioContext, param: CreateModuleParam
       x: param.x,
       y: param.y,
     },
-    destinationIds: [],
+    destinations: [],
     source: filter,
   }
 }
@@ -109,7 +118,7 @@ const createGainModule = (audioContext: AudioContext, param: CreateModuleParam):
       x: param.x,
       y: param.y,
     },
-    destinationIds: [],
+    destinations: [],
     source: gain,
   }
 }
@@ -124,7 +133,7 @@ const createOscillator = (audioContext: AudioContext, param: CreateModuleParam):
       y: param.y,
     },
     isPlaying: false,
-    destinationIds: [],
+    destinations: [],
     source: oscillator,
   }
 }
@@ -145,7 +154,6 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
       module.source.gain.value = param.gain;
       break;
     case 'oscillator':
-      console.log(param.isPlaying, module.isPlaying)
       if (module.isPlaying === param.isPlaying) {
         module.source.type = param.type;
         module.source.frequency.value = param.frequency;
@@ -158,9 +166,18 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
       } else {
         module.source.stop();
         module.source = module.source.context.createOscillator();
-        const destinations = state.modules.filter((m) => module.destinationIds.find((id) => id === m.id));
-        destinations.forEach((des) => {
-          connect(module, des);
+        const destinations = state
+          .modules
+          .reduce<[Module, DestinationInfo][]>((acc, m) => {
+            const des = module.destinations.find((d) => d.id === m.id)
+
+            if (des) {
+              acc.push([m, des]);
+            }
+            return acc;
+          }, []);
+        destinations.forEach(([desModule, des]) => {
+          connect(module, desModule, des);
         });
         module.source.type = param.type;
         module.source.frequency.value = param.frequency;
@@ -199,7 +216,7 @@ export const createModuleUpdater = (state: AudiOtterState) => (ev: UpdateModuleE
 }
 
 export const createModuleCreator = (state: AudiOtterState) => (param: CreateModuleParam) => {
-  const { destination: audioContext } = state.modules.find((module) => module.brand === 'speaker_out') as SpeakerOut;
+  const { context: audioContext } = state.modules.find((module) => module.brand === 'speaker_out') as SpeakerOut;
   const module = createModule(param, audioContext);
   state.modules = [...state.modules, module];
 }
@@ -219,12 +236,37 @@ const deleteLink = (state: AudiOtterState, deleteLink: Link) => {
   const srcModule = state.modules.find((module) => module.id === deleteLink?.sourceId);
   const desModule = state.modules.find((module) => module.id === deleteLink?.destinationId);
   if (isConnectableModule(srcModule) && desModule) {
-    srcModule.destinationIds = srcModule.destinationIds.filter((id) => id !== deleteLink?.destinationId);
-    disconnect(srcModule, desModule)
+    const desInfo = srcModule.destinations.find((d) => d.id === deleteLink.destinationId)
+    if (!desInfo) {
+      throw new Error('Not found destination info in src module');
+    }
+    disconnect(srcModule, desModule, desInfo!)
+    srcModule.destinations = srcModule.destinations.filter((d) => d.id !== deleteLink?.destinationId);
     state.linkMap.delete(deleteLink.id);
   }
   state.linkMap = new Map(state.linkMap);
   state.selectedItems = []
+}
+
+export const changeDestination = (state: AudiOtterState) => (moduleId: string, desInfo: DestinationInfo) => {
+  const module = state.modules.find((m) => m.id === moduleId)
+  const oldInfo = module?.destinations.find((d) => d.id === desInfo.id);
+  const desModule = state.modules.find((m) => m.id === desInfo.id);
+  if (!isConnectableModule(module) || !oldInfo || !desModule) {
+    throw new Error('Not found' + module + oldInfo + desModule)
+  }
+
+  disconnect(module, desModule, oldInfo);
+  connect(module, desModule, desInfo);
+
+  module.destinations = module.destinations.map((d) => {
+    if (d.id === desInfo.id) {
+      return desInfo
+    }
+    return d
+  });
+
+  console.log(module.destinations[0])
 }
 
 export const onDeleteLinkHandler = (state: AudiOtterState) => (linkId: string) => {

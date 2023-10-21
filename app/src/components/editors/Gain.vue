@@ -5,7 +5,7 @@
       <ContainButton color="delete" @click="() => props.onDelete(props.item.id)" > Delete </ContainButton>
     </div>
     <div>
-      <RangeSlider :step="0.01" :min="0" :max="20" :on-change="(n) => onUpdate('gain', n) " :value="param.gain"
+      <RangeSlider :step="0.01" :min="0" :max="5" :on-change="(n) => onUpdate('gain', n) " :value="param.gain"
           :label="`Gain ${param.gain}`" />
     </div>
   </div>

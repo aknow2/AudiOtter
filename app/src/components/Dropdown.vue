@@ -7,7 +7,7 @@
   </select>
 </template>
 <script lang="ts" setup>
-interface SelectItem {
+export interface SelectItem {
   value: string;
   label: string;
 }

@@ -8,7 +8,7 @@ type BaseModuleParam<T extends AudioNodeOptions, O extends keyof T = never> = Om
 export interface BaseModule {
   id: string;
   position: Position;
-  destinationIds: string[];
+  destinations: DestinationInfo[];
 }
 
 export interface MicIn extends BaseModule {
@@ -51,6 +51,19 @@ export type OscillatorParam = BaseModuleParam<OscillatorOptions, 'periodicWave'>
 
 export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam;
 
+interface NodeDestination {
+  id: string;
+  target: 'node';
+}
+
+interface ParamDestination {
+  id: string;
+  target: 'param';
+  paramKey: string;
+}
+
+export type DestinationInfo = NodeDestination | ParamDestination;
+
 export type InOutModule =  BiquadFilter | Delay | Gain | MicIn | Oscillator;
 export type InModule = MicIn;
 export type ConnectableModule = InModule | InOutModule;
@@ -74,7 +87,7 @@ export type UpdateModuleEvent = UpdateBiquadFilterEvent
 
 export interface SpeakerOut extends BaseModule {
   brand: 'speaker_out';
-  destination: AudioContext;
+  context: AudioContext;
 }
 
 export interface Link {

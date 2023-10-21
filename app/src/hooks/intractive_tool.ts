@@ -90,7 +90,7 @@ export const createConnectingModuleTool = ({state}: ToolContext): IntractiveTool
       if (desModule && srcModule) {
         const linkId = createLinkId(srcModule, desModule);
         if (canCreateLink(state.linkMap, srcModule, desModule, linkId)) {
-          srcModule.destinationIds.push(desModule.id);
+          srcModule.destinations.push({ target: 'node', id: desModule.id });
           connectModules(srcModule, state.modules, state.linkMap)
           state.linkMap = new Map(state.linkMap)
         }

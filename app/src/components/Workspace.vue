@@ -4,10 +4,10 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, inject } from 'vue';
 import createWorkspace, { Workspace } from '../space/workspace';
-import { lynreSynthKey } from '../hooks/AudiOtterState';
+import { audioOtterStateKey } from '../hooks/AudiOtterState';
   const workspace = ref<Workspace|null>(null)
 
-  const audiOtter = inject(lynreSynthKey)
+  const audiOtter = inject(audioOtterStateKey)
   onMounted(() => {
     const canvas: HTMLCanvasElement = document.querySelector('#pixi') as HTMLCanvasElement
     workspace.value = createWorkspace(canvas)

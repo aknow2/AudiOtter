@@ -10,8 +10,11 @@
       </PlayBtn>
     </div>
     <div>
+      <Dropdown :label="`Type ${param.type}`" :items="oscTypes.map((type) => ({ value: type, label: type }))" :selected="param.type" :on-select="(v) => onUpdate('type', v as OscillatorType)" />
+    </div>
+    <div>
       <RangeSlider :step="1" :min="0" :max="7000" :on-change="(n) => onUpdate('frequency', n) " :value="param.frequency"
-          :label="`Gain ${param.frequency}`" />
+          :label="`Frequency ${param.frequency}`" />
     </div>
     <div>
       <RangeSlider :step="1" :min="-100" :max="100" :on-change="(n) => onUpdate('detune', n) " :value="param.detune"
@@ -23,9 +26,17 @@
 import { defineProps } from 'vue'
 import ContainButton from '../ContainButton.vue';
 import RangeSlider from '../RangeSlider.vue';
+import Dropdown from '../Dropdown.vue';
 import useConnectableModuleEditor from './hooks';
 import PlayBtn from '../Palettes/PaletteItem.vue';
 import { Oscillator, UpdateModuleEvent } from '../../hooks/types';
+
+const oscTypes: OscillatorType[] = [
+  'sine',
+  'square',
+  'sawtooth',
+  'triangle',
+]
 
 const props = defineProps<{
   item: Oscillator,

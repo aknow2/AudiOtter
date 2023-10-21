@@ -13,7 +13,7 @@
 <script lang="ts" setup>
 import PaletteItem from './Palettes/PaletteItem.vue'
 import { computed, inject } from 'vue';
-import { AudiOtterComposition, lynreSynthKey } from '../hooks/AudiOtterState';
+import { AudiOtterComposition, audioOtterStateKey } from '../hooks/AudiOtterState';
 import CableIcon from '../assets/icons/cable.svg'
 import DelayIcon from '../assets/icons/delay.svg'
 import BiquadIcon from '../assets/icons/biquad.svg'
@@ -21,7 +21,7 @@ import GainIcon from '../assets/icons/gain.svg'
 import OscillatorIcon from '../assets/icons/oscillator.svg'
 import { CreateToolParam } from '../hooks/intractive_tool';
 
-const { selectedPalette, changeTool } = inject(lynreSynthKey) as AudiOtterComposition
+const { selectedPalette, changeTool } = inject(audioOtterStateKey) as AudiOtterComposition
 
 const createPatteItemData = (param:  CreateToolParam) => {
   const selected = selectedPalette.value === param.type

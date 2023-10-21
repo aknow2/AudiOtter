@@ -24,10 +24,10 @@
 import { provide } from 'vue';
 import ItemEditor from './components/ItemEditor.vue';
 import Workspace from './components/Workspace.vue';
-import useAudiOtter, { lynreSynthKey } from './hooks/AudiOtterState';
+import useAudiOtter, { audioOtterStateKey } from './hooks/AudiOtterState';
 
 const lynreSynth = useAudiOtter();
 const { state, init } = lynreSynth;
 
-provide(lynreSynthKey, lynreSynth);
+provide(audioOtterStateKey, lynreSynth);
 </script>
