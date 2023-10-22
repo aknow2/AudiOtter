@@ -15,13 +15,12 @@ export interface MicIn extends BaseModule {
   brand: 'mic_in';
   source: MediaStreamAudioSourceNode;
 }
+export type MicInParam = BaseModuleParam<{}>
 
 type AudioParamKeys<T> = {
     [K in keyof T]: T[K] extends AudioParam ? K : never;
 }[keyof T];
-
 export type BiquadFilterNodeAudioParamKeys = AudioParamKeys<BiquadFilterNode>;
-
 export interface BiquadFilter extends BaseModule {
   brand: 'biquad_filter';
   source: BiquadFilterNode;
@@ -49,7 +48,7 @@ export type OscillatorParam = BaseModuleParam<OscillatorOptions, 'periodicWave'>
   isPlaying: boolean;
 }
 
-export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam;
+export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam | MicInParam;
 
 interface NodeDestination {
   id: string;

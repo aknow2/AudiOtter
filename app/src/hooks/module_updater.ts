@@ -73,8 +73,6 @@ export const connectModules = (srcModule: Module, modules: Module[], linkMap: Ma
   })
 }
 
-
-
 interface CreateModuleParam {
   x: number;
   y: number;
@@ -265,8 +263,6 @@ export const changeDestination = (state: AudiOtterState) => (moduleId: string, d
     }
     return d
   });
-
-  console.log(module.destinations[0])
 }
 
 export const onDeleteLinkHandler = (state: AudiOtterState) => (linkId: string) => {

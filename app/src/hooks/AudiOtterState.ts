@@ -3,13 +3,11 @@ import { InjectionKey, computed, reactive, readonly} from "vue"
 import { BiquadFilter, Delay, Item, LinkMap, AudiOtterState, MicIn, Module, SpeakerOut } from "./types";
 import { useIntractiveTool } from "./intractive_tool";
 import { changeDestination, connectModules, onDeleteLinkHandler, onDeleteModuleHandler } from "./module_updater";
+import { loadModules, saveModules } from "./loader";
 
-const loadModules = async () => {
+const loadSample = async (audioContext: AudioContext) => {
   const mediaStreamStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-  const audioContext = new AudioContext();
-
   const mediaStreamSource = audioContext.createMediaStreamSource(mediaStreamStream);
-
   const speakerOut: SpeakerOut = {
     id: nanoid(),
     brand: 'speaker_out',
@@ -34,6 +32,7 @@ const loadModules = async () => {
   }
 
   const delay = audioContext.createDelay(10)
+  delay.delayTime.value = 0.5;
   const delayModule: Delay = {
     id: nanoid(),
     brand: 'delay',
@@ -55,10 +54,25 @@ const loadModules = async () => {
     destinations: [{ target: 'node', id: speakerOut.id }, { target: 'node', id: delayModule.id }],
     source: mediaStreamSource,
   }
+
   return [micIn, speakerOut, quadFilter, delayModule];
 }
 
-const buildModuleAndLink = (modules: Module[]): LinkMap => {
+
+const storageKey = 'AudioOtterModules';
+const initModules = async (): Promise<Module[]> => {
+  const audioContext = new AudioContext();
+
+  const loadedModules = await loadModules(storageKey, audioContext);
+
+  if(loadedModules) {
+    return loadedModules;
+  }
+
+  return await loadSample(audioContext);
+}
+
+const connectModuleAndLink = (modules: Module[]): LinkMap => {
   const linkMap = new Map();
   for (const outModule of modules) {
     connectModules(outModule, modules, linkMap);
@@ -67,6 +81,13 @@ const buildModuleAndLink = (modules: Module[]): LinkMap => {
 }
 
 const useAudiOtter = () => {
+  window.addEventListener('beforeunload', (ev) => {
+
+    saveModules(mutableState.modules, storageKey);
+    ev.returnValue = 'Are you sure you want to close?';
+  });
+
+
   const mutableState = reactive<AudiOtterState>({
     status: 'title',
     modules: [],
@@ -77,8 +98,8 @@ const useAudiOtter = () => {
 
   const init =  async () => {
     mutableState.status = 'loading';
-    const modules = await loadModules();
-    mutableState.linkMap = buildModuleAndLink(modules);
+    const modules = await initModules();
+    mutableState.linkMap = connectModuleAndLink(modules);
     mutableState.status = 'running';
     mutableState.modules = modules;
   }
