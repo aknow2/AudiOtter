@@ -25,10 +25,7 @@ const props = defineProps<{
 const { param, onUpdate } = useConnectableModuleEditor({
   brand: 'delay',
   module: props.item,
-  param: {
-    delayTime: props.item.source.delayTime.value,
-    maxDelayTime: 10, // Read only property
-  }
+  param: props.item.param,
 }, props.onChange);
 
 </script>

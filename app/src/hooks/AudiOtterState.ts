@@ -1,13 +1,11 @@
 import { nanoid } from "nanoid";
 import { InjectionKey, computed, reactive, readonly} from "vue"
-import { BiquadFilter, Delay, Item, LinkMap, AudiOtterState, MicIn, Module, SpeakerOut, Gain } from "./types";
+import { BiquadFilter, Delay, Item, AudiOtterState, MicIn, Module, SpeakerOut, Gain } from "./types";
 import { useIntractiveTool } from "./intractive_tool";
 import { changeDestination, connectModules, onDeleteLinkHandler, onDeleteModuleHandler } from "./module_updater";
 import { loadModules, saveModules } from "./loader";
 
 const loadSample = async (audioContext: AudioContext) => {
-  const mediaStreamStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-  const mediaStreamSource = audioContext.createMediaStreamSource(mediaStreamStream);
   const speakerOut: SpeakerOut = {
     id: nanoid(),
     brand: 'speaker_out',
@@ -16,10 +14,8 @@ const loadSample = async (audioContext: AudioContext) => {
       y: 300,
     },
     destinations: [],
-    context: audioContext,
   }
 
-  const lowpassFilter = audioContext.createBiquadFilter();
   const quadFilter: BiquadFilter = {
     id: nanoid(),
     brand: 'biquad_filter',
@@ -27,12 +23,16 @@ const loadSample = async (audioContext: AudioContext) => {
       x: 250,
       y: 200,
     },
+    param: {
+      frequency: 300,
+      Q: 1,
+      gain: 1,
+      detune: 1,
+      type: 'lowpass',
+    },
     destinations: [{ target: 'node', id: speakerOut.id }],
-    source: lowpassFilter,
   }
 
-  const delay = audioContext.createDelay(10)
-  delay.delayTime.value = 0.5;
   const delayModule: Delay = {
     id: nanoid(),
     brand: 'delay',
@@ -40,8 +40,11 @@ const loadSample = async (audioContext: AudioContext) => {
       x: 150,
       y: 50,
     },
+    param: {
+      delayTime: 0.1,
+      maxDelayTime: 10,
+    },
     destinations: [{ target: 'node', id: quadFilter.id }],
-    source: delay,
   }
 
   const gain = audioContext.createGain();
@@ -53,11 +56,14 @@ const loadSample = async (audioContext: AudioContext) => {
       x: 300,
       y: 100,
     },
+    param: {
+      gain: gain.gain.value,
+    },
     destinations: [{ target: 'node', id: delayModule.id }],
-    source: gain,
   }
   quadFilter.destinations.push({ target: 'node', id: gainModule.id });
 
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const micIn: MicIn = {
     id: nanoid(),
     brand: 'mic_in',
@@ -65,8 +71,10 @@ const loadSample = async (audioContext: AudioContext) => {
       x: 50,
       y: 50,
     },
+    param: { 
+      stream,
+    },
     destinations: [{ target: 'node', id: speakerOut.id }, { target: 'node', id: delayModule.id }],
-    source: mediaStreamSource,
   }
 
   return [micIn, speakerOut, quadFilter, delayModule, gainModule];
@@ -74,24 +82,20 @@ const loadSample = async (audioContext: AudioContext) => {
 
 
 const storageKey = 'AudioOtterModules';
-const initModules = async (): Promise<Module[]> => {
-  const audioContext = new AudioContext();
+const initModules = async (audioContext: AudioContext): Promise<Module[]> => {
 
-  const loadedModules = await loadModules(storageKey, audioContext);
-
-  if(loadedModules) {
+  const loadedModules = await loadModules(storageKey);
+  if(loadedModules && loadedModules.length > 0) {
     return loadedModules;
   }
 
   return await loadSample(audioContext);
 }
 
-const connectModuleAndLink = (modules: Module[]): LinkMap => {
-  const linkMap = new Map();
-  for (const outModule of modules) {
-    connectModules(outModule, modules, linkMap);
+const connectModuleAndLink = (modules: Module[], state: AudiOtterState) => {
+  for (const module of modules) {
+    connectModules(module, state);
   }
-  return linkMap
 }
 
 const useAudiOtter = () => {
@@ -107,15 +111,19 @@ const useAudiOtter = () => {
     modules: [],
     linkMap: new Map(),
     selectedItems: [],
+    webAudio: {
+      context: new AudioContext(),
+      node: new Map(),
+    }
   });
   const { tool, changeTool, selectedPalette } = useIntractiveTool(mutableState)
 
   const init =  async () => {
     mutableState.status = 'loading';
-    const modules = await initModules();
-    mutableState.linkMap = connectModuleAndLink(modules);
-    mutableState.status = 'running';
+    const modules = await initModules(mutableState.webAudio.context);
     mutableState.modules = modules;
+    connectModuleAndLink(modules, mutableState);
+    mutableState.status = 'running';
   }
 
   return {

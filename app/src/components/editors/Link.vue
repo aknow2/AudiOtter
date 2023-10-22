@@ -15,11 +15,11 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { DeepReadonly, PropType, computed, defineProps } from 'vue'
+import { DeepReadonly, PropType, computed, defineProps, inject } from 'vue'
 import ContainButton from '../ContainButton.vue';
 import Dropdown, { SelectItem } from '../Dropdown.vue';
 import { Link, Module } from '../../hooks/types';
-import { AudiOtterComposition } from '../../hooks/AudiOtterState';
+import { AudiOtterComposition, audioOtterStateKey } from '../../hooks/AudiOtterState';
 import { isConnectableModule } from '../../hooks/module_updater';
 
 const props = defineProps({
@@ -73,6 +73,8 @@ const selectedDestination = computed(() => {
   return info?.target === 'param' ? info.paramKey : 'node'
 })
 
+const composition = inject(audioOtterStateKey) as AudiOtterComposition
+
 const selectableDestinations = computed(() => {
   const src = source.value;
   const des = destination.value as Module
@@ -81,7 +83,10 @@ const selectableDestinations = computed(() => {
   if (destinationInfo && des && source) {
     if (isConnectableModule(des)) {
       // fixme: this is a hack to get the audio param keys
-      const node = des.source as any
+      const node = composition.state.webAudio.node.get(des.id) as any;
+      if (!node) {
+        throw new Error(`Could not find node for module ${des.id}`)
+      }
       // find all audio params
       const list =  Object.getOwnPropertyNames(Object.getPrototypeOf(node))
         .filter((key) => {

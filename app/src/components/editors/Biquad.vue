@@ -29,7 +29,7 @@ import Dropdown from '../Dropdown.vue';
 import useConnectableModuleEditor from './hooks';
 import { BiquadFilter, UpdateModuleEvent } from '../../hooks/types';
 
-const filterTypes: BiquadFilter['source']['type'][] = [
+const filterTypes: BiquadFilterType[] = [
   'lowpass',
   'highpass',
   'bandpass',
@@ -49,13 +49,7 @@ const props = defineProps<{
 const { param, onUpdate } = useConnectableModuleEditor({
   brand: 'biquad_filter',
   module: props.item,
-  param: {
-    type: props.item.source.type,
-    gain: props.item.source.gain.value,
-    frequency: props.item.source.frequency.value,
-    Q: props.item.source.Q.value,
-    detune: props.item.source.detune.value,
-  }
+  param: props.item.param,
 }, props.onChange);
 
 </script>

@@ -26,9 +26,7 @@ const props = defineProps<{
 const { param, onUpdate } = useConnectableModuleEditor({
   brand: 'gain',
   module: props.item,
-  param: {
-    gain: props.item.source.gain.value,
-  }
+  param: props.item.param,
 }, props.onChange);
 
 </script>

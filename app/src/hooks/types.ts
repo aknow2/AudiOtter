@@ -11,42 +11,43 @@ export interface BaseModule {
   destinations: DestinationInfo[];
 }
 
+export type MicInParam = BaseModuleParam<{}> & {
+  stream: MediaStream;
+}
 export interface MicIn extends BaseModule {
   brand: 'mic_in';
-  source: MediaStreamAudioSourceNode;
+  param: MicInParam;
 }
-export type MicInParam = BaseModuleParam<{}>
 
 type AudioParamKeys<T> = {
     [K in keyof T]: T[K] extends AudioParam ? K : never;
 }[keyof T];
+export type BiquadFilterParam = BaseModuleParam<BiquadFilterOptions>
 export type BiquadFilterNodeAudioParamKeys = AudioParamKeys<BiquadFilterNode>;
 export interface BiquadFilter extends BaseModule {
   brand: 'biquad_filter';
-  source: BiquadFilterNode;
+  param: BiquadFilterParam;
 }
-export type BiquadFilterParam = BaseModuleParam<BiquadFilterOptions>
 
+export type DelayParam = BaseModuleParam<DelayOptions>
 export interface Delay extends BaseModule {
   brand: 'delay';
-  source: DelayNode;
+  param: DelayParam;
 }
-export type DelayParam = BaseModuleParam<DelayOptions>
 
+export type GainParam = BaseModuleParam<GainOptions>
 export interface Gain extends BaseModule {
   brand: 'gain';
-  source: GainNode;
-}
-export type GainParam = BaseModuleParam<GainOptions>
-
-export interface Oscillator extends BaseModule {
-  brand: 'oscillator';
-  source: OscillatorNode;
-  isPlaying: boolean;
+  param: GainParam;
 }
 export type OscillatorParam = BaseModuleParam<OscillatorOptions, 'periodicWave'> & {
   isPlaying: boolean;
 }
+export interface Oscillator extends BaseModule {
+  brand: 'oscillator';
+  param: OscillatorParam;
+}
+
 
 export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam | MicInParam;
 
@@ -86,7 +87,6 @@ export type UpdateModuleEvent = UpdateBiquadFilterEvent
 
 export interface SpeakerOut extends BaseModule {
   brand: 'speaker_out';
-  context: AudioContext;
 }
 
 export interface Link {
@@ -115,11 +115,16 @@ export type Module = ConnectableModule | OutModule;
 export type Item = Module | Link;
 export type Status = 'title' | 'loading' | 'running';
 export type LinkMap = Map<string, Link>;
+export type NodeMap = Map<string, AudioNode>;
 
 export interface AudiOtterState {
   status: Status;
   modules: Module[];
   linkMap: LinkMap;
+  webAudio: {
+    context: AudioContext;
+    node: NodeMap;
+  }
   selectedItems: string[];
   draggingItem?: string;
   feedBack?: Feedback;

@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, SpeakerOut, UpdateModuleEvent, Gain, Oscillator, DestinationInfo } from "./types";
+import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, UpdateModuleEvent, Gain, Oscillator, DestinationInfo, NodeMap } from "./types";
 
 export const isConnectableModule = (module: Module|undefined): module is ConnectableModule => {
   return module?.brand === 'mic_in'
@@ -38,37 +38,112 @@ const getDestination = (node: AudioNode, desInfo: DestinationInfo) => {
   return (node as any)[desInfo.paramKey] as any;
 }
 
-const connect = (srcModule: ConnectableModule, desModule: Module, desInfo: DestinationInfo) => {
+const createNode = (module: ConnectableModule, context: AudioContext): AudioNode => {
+  switch (module.brand) {
+    case 'delay': {
+      const node = new DelayNode(context, {
+        delayTime: module.param.delayTime,
+      });
+      return node;
+    }
+    case 'biquad_filter': {
+      const node = new BiquadFilterNode(context, {
+        Q: module.param.Q,
+        frequency: module.param.frequency,
+        detune: module.param.detune,
+        gain: module.param.gain,
+        type: module.param.type,
+      });
+      return node;
+    }
+    case 'gain': {
+      const node = new GainNode(context, {
+        gain: module.param.gain,
+      });
+      return node;
+    }
+    case 'oscillator': {
+      const node = new OscillatorNode(context, {
+        type: module.param.type,
+        frequency: module.param.frequency,
+        detune: module.param.detune,
+      });
+      return node;
+    }
+    case "mic_in": {
+      const node = context.createMediaStreamSource(module.param.stream);
+      return node;
+    }
+  }
+}
+
+const getOrCreateNode = (module: ConnectableModule, context: AudioContext, nodeMap: NodeMap): AudioNode => {
+  const node = nodeMap.get(module.id);
+  if (node) {
+    return node;
+  }
+  const newNode = createNode(module, context);
+  nodeMap.set(module.id, newNode);
+  return newNode;
+}
+
+const connect = (
+  srcModule: ConnectableModule,
+  desModule: Module,
+  desInfo: DestinationInfo,
+  context: AudioContext,
+  nodeMap: NodeMap) => {
+  
+  const srcNode = getOrCreateNode(srcModule, context, nodeMap);
   if (isOutModule(desModule)) {
-    srcModule.source.connect(getDestination(desModule.context.destination, desInfo));
+    srcNode.connect(getDestination(context.destination, desInfo));
   } else {
-    const des =  getDestination(desModule.source, desInfo)
-    srcModule.source.connect(des);
+    const desNode = getOrCreateNode(desModule, context, nodeMap);
+    const des =  getDestination(desNode, desInfo)
+    srcNode.connect(des);
   }
 }
 
-const disconnect = (srcModule: ConnectableModule, desModule: Module, desInfo: DestinationInfo) => {
+const disconnect = (srcModule: ConnectableModule, desModule: Module, desInfo: DestinationInfo, context: AudioContext, nodeMap: NodeMap) => {
+  const srcNode = nodeMap.get(srcModule.id);
+
+  if (!srcNode) {
+    throw new Error('Not found node in nodeMap');
+  }
+
   if (isConnectableModule(desModule)) {
-    srcModule.source.disconnect(getDestination(desModule.source, desInfo))
+    const desNode = nodeMap.get(desModule.id);
+    if (!desNode) {
+      throw new Error('Not found node in nodeMap');
+    }
+    srcNode.disconnect(getDestination(desNode, desInfo))
   } else {
-    srcModule.source.disconnect(getDestination(desModule.context.destination, desInfo))
+    srcNode.disconnect(getDestination(context.destination, desInfo))
   }
 }
 
-export const connectModuleProcess = (srcModule: Module, desModule: Module, destination: DestinationInfo, linkMap: Map<string, Link>) => {
+export const connectModuleProcess = (
+  srcModule: Module,
+  desModule: Module,
+  destination: DestinationInfo,
+  state: AudiOtterState) => {
   const linkId = createLinkId(srcModule, desModule);
+  const { linkMap, webAudio: { context, node } } = state;
   if (canCreateLink(linkMap, srcModule, desModule, linkId)) {
     const link = createLink(srcModule, desModule, linkId)
     linkMap.set(link.id, link)
-    connect(srcModule, desModule, destination)
+    connect(srcModule, desModule, destination, context, node);
   }
 }
 
-export const connectModules = (srcModule: Module, modules: Module[], linkMap: Map<string, Link>) => {
+export const connectModules = (
+  srcModule: Module,
+  state: AudiOtterState,
+) => {
   srcModule.destinations.forEach((destination) => {
-    const desModule = modules.find((m) => m.id === destination.id);
+    const desModule = state.modules.find((m) => m.id === destination.id);
     if (desModule) {
-      connectModuleProcess(srcModule, desModule, destination, linkMap);
+      connectModuleProcess(srcModule, desModule, destination, state);
     }
   })
 }
@@ -78,8 +153,7 @@ interface CreateModuleParam {
   y: number;
   type: ModuleBrand
 }
-const createDelay = (audioContext: AudioContext, param: CreateModuleParam): Delay => {
-  const delay = audioContext.createDelay(10)
+const createDelay = (param: CreateModuleParam): Delay => {
   return {
     id: nanoid(),
     brand: 'delay',
@@ -87,13 +161,15 @@ const createDelay = (audioContext: AudioContext, param: CreateModuleParam): Dela
       x: param.x,
       y: param.y,
     },
+    param: {
+      delayTime: 0.1,
+      maxDelayTime: 10,
+    },
     destinations: [],
-    source: delay,
   }
 }
 
-const createBiquadFilter = (audioContext: AudioContext, param: CreateModuleParam): BiquadFilter => {
-  const filter = audioContext.createBiquadFilter();
+const createBiquadFilter = (param: CreateModuleParam): BiquadFilter => {
 
   return {
     id: nanoid(),
@@ -102,13 +178,18 @@ const createBiquadFilter = (audioContext: AudioContext, param: CreateModuleParam
       x: param.x,
       y: param.y,
     },
+    param: {
+      type: 'lowpass',
+      frequency: 350,
+      detune: 0,
+      Q: 1,
+      gain: 0,
+    },
     destinations: [],
-    source: filter,
   }
 }
 
-const createGainModule = (audioContext: AudioContext, param: CreateModuleParam): Gain => {
-  const gain = audioContext.createGain();
+const createGainModule = ( param: CreateModuleParam): Gain => {
   return {
     id: nanoid(),
     brand: 'gain',
@@ -116,13 +197,14 @@ const createGainModule = (audioContext: AudioContext, param: CreateModuleParam):
       x: param.x,
       y: param.y,
     },
+    param: {
+      gain: 0.3,
+    },
     destinations: [],
-    source: gain,
   }
 }
 
-const createOscillator = (audioContext: AudioContext, param: CreateModuleParam): Oscillator => {
-  const oscillator = audioContext.createOscillator();
+const createOscillator = (param: CreateModuleParam): Oscillator => {
   return {
     id: nanoid(),
     brand: 'oscillator',
@@ -130,73 +212,102 @@ const createOscillator = (audioContext: AudioContext, param: CreateModuleParam):
       x: param.x,
       y: param.y,
     },
-    isPlaying: false,
+    param: {
+      isPlaying: false,
+      type: 'sine',
+      frequency: 440,
+      detune: 0,
+    },
     destinations: [],
-    source: oscillator,
   }
 }
 
 
 const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, state: AudiOtterState) => {
   switch (brand) {
-    case 'delay':
-      module.source.delayTime.value = param.delayTime;
-      break;
-    case 'biquad_filter':
-      module.source.type = param.type;
-      module.source.frequency.value = param.frequency;
-      module.source.Q.value = param.Q;
-      module.source.gain.value = param.gain;
-      break;
-    case 'gain':
-      module.source.gain.value = param.gain;
-      break;
-    case 'oscillator':
-      if (module.isPlaying === param.isPlaying) {
-        module.source.type = param.type;
-        module.source.frequency.value = param.frequency;
-        module.source.detune.value = param.detune;
+    case 'delay': {
+      module.param = param;
+      const node = state.webAudio.node.get(module.id) as DelayNode;
+      if (node) {
+        node.delayTime.value = param.delayTime;
+      }
+    }
+    break;
+    case 'biquad_filter': {
+      module.param = param
+      const node = state.webAudio.node.get(module.id) as BiquadFilterNode;
+      if (node) {
+        node.type = param.type;
+        node.frequency.value = param.frequency;
+        node.detune.value = param.detune;
+        node.Q.value = param.Q;
+        node.gain.value = param.gain;
+      }
+    }
+    break;
+    case 'gain': {
+      module.param = param
+      const node = state.webAudio.node.get(module.id) as GainNode;
+      if (node) {
+        node.gain.value = param.gain;
+      }
+    }
+    break;
+    case 'oscillator': {
+      const node = state.webAudio.node.get(module.id) as OscillatorNode;
+      if (!node) return
+      if (module.param.isPlaying === param.isPlaying) {
+        node.type = param.type;
+        node.frequency.value = param.frequency;
+        node.detune.value = param.detune;
+        module.param = {
+          ...param,
+        };
         return;
       }
-      module.isPlaying = param.isPlaying;
+      module.param = {
+        ...param,
+      };
       if (param.isPlaying) {
-        module.source.start();
+        node.start();
       } else {
-        module.source.stop();
-        module.source = module.source.context.createOscillator();
+        node.stop();
+        const newNode = node.context.createOscillator();
         const destinations = state
           .modules
           .reduce<[Module, DestinationInfo][]>((acc, m) => {
             const des = module.destinations.find((d) => d.id === m.id)
-
             if (des) {
               acc.push([m, des]);
             }
             return acc;
           }, []);
         destinations.forEach(([desModule, des]) => {
-          connect(module, desModule, des);
+          connect(module, desModule, des, state.webAudio.context, state.webAudio.node);
         });
-        module.source.type = param.type;
-        module.source.frequency.value = param.frequency;
-        module.source.detune.value = param.detune;
+        newNode.type = param.type;
+        newNode.frequency.value = param.frequency;
+        newNode.detune.value = param.detune;
+        module.param = param
+        state.webAudio.node.set(module.id, newNode);
       }
       break;
+    }
     default:
       throw new Error('not support')
   }
 }
 
-const createModule = (param: CreateModuleParam, audioContext: AudioContext): Module => {
+const createModule = (param: CreateModuleParam): Module => {
   switch (param.type) {
     case 'delay':
-      return createDelay(audioContext, param);
+      return createDelay(param);
     case 'biquad_filter':
-      return createBiquadFilter(audioContext, param);
+      return createBiquadFilter(param);
     case 'gain':
-      return createGainModule(audioContext, param);
+      return createGainModule(param);
     case 'oscillator':
-      return createOscillator(audioContext, param);
+      return createOscillator(param);
     default:
       throw new Error('not support')
   }
@@ -214,8 +325,7 @@ export const createModuleUpdater = (state: AudiOtterState) => (ev: UpdateModuleE
 }
 
 export const createModuleCreator = (state: AudiOtterState) => (param: CreateModuleParam) => {
-  const { context: audioContext } = state.modules.find((module) => module.brand === 'speaker_out') as SpeakerOut;
-  const module = createModule(param, audioContext);
+  const module = createModule(param);
   state.modules = [...state.modules, module];
 }
 
@@ -238,7 +348,7 @@ const deleteLink = (state: AudiOtterState, deleteLink: Link) => {
     if (!desInfo) {
       throw new Error('Not found destination info in src module');
     }
-    disconnect(srcModule, desModule, desInfo!)
+    disconnect(srcModule, desModule, desInfo!, state.webAudio.context, state.webAudio.node);
     srcModule.destinations = srcModule.destinations.filter((d) => d.id !== deleteLink?.destinationId);
     state.linkMap.delete(deleteLink.id);
   }
@@ -254,8 +364,8 @@ export const changeDestination = (state: AudiOtterState) => (moduleId: string, d
     throw new Error('Not found' + module + oldInfo + desModule)
   }
 
-  disconnect(module, desModule, oldInfo);
-  connect(module, desModule, desInfo);
+  disconnect(module, desModule, oldInfo, state.webAudio.context, state.webAudio.node);
+  connect(module, desModule, desInfo, state.webAudio.context, state.webAudio.node);
 
   module.destinations = module.destinations.map((d) => {
     if (d.id === desInfo.id) {

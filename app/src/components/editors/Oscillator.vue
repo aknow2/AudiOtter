@@ -5,7 +5,7 @@
       <ContainButton color="delete" @click="() => props.onDelete(props.item.id)" > Delete </ContainButton>
     </div>
     <div>
-      <PlayBtn color="cyan" :pressed="props.item.isPlaying" @click="() => onUpdate('isPlaying', !item.isPlaying)">
+      <PlayBtn color="cyan" :pressed="props.item.param.isPlaying" @click="() => onUpdate('isPlaying', !item.param.isPlaying)">
         Play
       </PlayBtn>
     </div>
@@ -47,12 +47,7 @@ const props = defineProps<{
 const { param, onUpdate } = useConnectableModuleEditor({
   brand: 'oscillator',
   module: props.item,
-  param: {
-    type: props.item.source.type,
-    frequency: props.item.source.frequency.value,
-    detune: props.item.source.detune.value,
-    isPlaying: props.item.isPlaying,
-  }
+  param: props.item.param,
 }, props.onChange);
 
 </script>

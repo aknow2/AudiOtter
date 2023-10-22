@@ -14,20 +14,21 @@ const toMicInSchema = (module: MicIn): ConnectableModuleSchema<MicIn, MicInParam
     brand: 'mic_in',
     position: module.position,
     destinations: module.destinations,
-    param: {}
+    param: module.param,
   }
 }
 
-const fromMicInSchema = async (schema: ConnectableModuleSchema<MicIn, MicInParam>, context: AudioContext): Promise<MicIn> => {
+const fromMicInSchema = async (schema: ConnectableModuleSchema<MicIn, MicInParam>): Promise<MicIn> => {
   const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const mediaStreamSource = context.createMediaStreamSource(mediaStream);
 
   return {
     id: schema.id,
     brand: 'mic_in',
     position: schema.position,
     destinations: schema.destinations,
-    source: mediaStreamSource,
+    param: {
+      stream: mediaStream,
+    },
   }
 }
 
@@ -37,22 +38,17 @@ const toDelaySchema = (module: Delay): ConnectableModuleSchema<Delay, DelayParam
     brand: 'delay',
     position: module.position,
     destinations: module.destinations,
-    param: {
-      delayTime: module.source.delayTime.value,
-      maxDelayTime: 10,
-    }
+    param: module.param,
   }
 }
 
-const fromDelaySchema = (schema: ConnectableModuleSchema<Delay, DelayParam>, context: AudioContext): Delay => {
-  const delay = context.createDelay(schema.param.maxDelayTime);
-  delay.delayTime.value = schema.param.delayTime;
+const fromDelaySchema = (schema: ConnectableModuleSchema<Delay, DelayParam>): Delay => {
   return {
     id: schema.id,
+    param: schema.param,
     brand: 'delay',
     position: schema.position,
     destinations: schema.destinations,
-    source: delay,
   }
 }
 
@@ -62,21 +58,18 @@ const toGainSchema = (module: Gain): ConnectableModuleSchema<Gain, GainParam> =>
     brand: 'gain',
     position: module.position,
     destinations: module.destinations,
-    param: {
-      gain: module.source.gain.value,
-    }
+    param: module.param,
   }
 }
 
-const fromGainSchema = (schema: ConnectableModuleSchema<Gain, GainParam>, context: AudioContext): Gain => {
-  const gain = context.createGain();
-  gain.gain.value = schema.param.gain;
+const fromGainSchema = (schema: ConnectableModuleSchema<Gain, GainParam>): Gain => {
+
   return {
     id: schema.id,
+    param: schema.param,
     brand: 'gain',
     position: schema.position,
     destinations: schema.destinations,
-    source: gain,
   }
 }
 
@@ -86,28 +79,17 @@ const toOscillatorSchema = (module: Oscillator): ConnectableModuleSchema<Oscilla
     brand: 'oscillator',
     position: module.position,
     destinations: module.destinations,
-    isPlaying: module.isPlaying,
-    param: {
-      type: module.source.type,
-      frequency: module.source.frequency.value,
-      detune: module.source.detune.value,
-      isPlaying: module.isPlaying,
-    }
+    param: module.param,
   }
 }
 
-const fromOscillatorSchema = (schema: ConnectableModuleSchema<Oscillator, OscillatorParam>, context: AudioContext): Oscillator => {
-  const oscillator = context.createOscillator();
-  oscillator.type = schema.param.type;
-  oscillator.frequency.value = schema.param.frequency;
-  oscillator.detune.value = schema.param.detune;
+const fromOscillatorSchema = (schema: ConnectableModuleSchema<Oscillator, OscillatorParam>): Oscillator => {
   return {
     id: schema.id,
     brand: 'oscillator',
     position: schema.position,
     destinations: schema.destinations,
-    isPlaying: schema.isPlaying,
-    source: oscillator,
+    param: schema.param,
   }
 }
 
@@ -117,29 +99,17 @@ const toBiquadFilterSchema = (module: BiquadFilter): ConnectableModuleSchema<Biq
     brand: 'biquad_filter',
     position: module.position,
     destinations: module.destinations,
-    param: {
-      type: module.source.type,
-      frequency: module.source.frequency.value,
-      detune: module.source.detune.value,
-      Q: module.source.Q.value,
-      gain: module.source.gain.value,
-    }
+    param: module.param,
   }
 }
 
-const fromBiquadFilterSchema = (schema: ConnectableModuleSchema<BiquadFilter, BiquadFilterParam>, context: AudioContext): BiquadFilter => {
-  const biquadFilter = context.createBiquadFilter();
-  biquadFilter.type = schema.param.type;
-  biquadFilter.frequency.value = schema.param.frequency;
-  biquadFilter.detune.value = schema.param.detune;
-  biquadFilter.Q.value = schema.param.Q;
-  biquadFilter.gain.value = schema.param.gain;
+const fromBiquadFilterSchema = (schema: ConnectableModuleSchema<BiquadFilter, BiquadFilterParam>): BiquadFilter => {
   return {
     id: schema.id,
     brand: 'biquad_filter',
     position: schema.position,
     destinations: schema.destinations,
-    source: biquadFilter,
+    param: schema.param,
   }
 }
 
@@ -152,13 +122,12 @@ const toSpeakerOutSchema = (module: SpeakerOut): OutModuleSchema<SpeakerOut> => 
   }
 }
 
-const fromSpeakerOutSchema = (schema: OutModuleSchema<SpeakerOut>, context: AudioContext): SpeakerOut => {
+const fromSpeakerOutSchema = (schema: OutModuleSchema<SpeakerOut>): SpeakerOut => {
   return {
     id: schema.id,
     brand: 'speaker_out',
     position: schema.position,
     destinations: schema.destinations,
-    context,
   }
 }
 
@@ -185,7 +154,7 @@ export const saveModules = (modules: Module[], storageKey: string) => {
   localStorage.setItem(storageKey, json);
 }
 
-export const loadModules = async (storageKey: string, audioContext: AudioContext): Promise< Module[] | undefined> => {
+export const loadModules = async (storageKey: string): Promise< Module[] | undefined> => {
   const json = localStorage.getItem(storageKey);
   if (!json) {
     return undefined;
@@ -195,17 +164,17 @@ export const loadModules = async (storageKey: string, audioContext: AudioContext
   const modules = schemas.map(schema => {
     switch (schema.brand) {
       case 'delay':
-        return fromDelaySchema(schema as ConnectableModuleSchema<Delay, DelayParam>, audioContext);
+        return fromDelaySchema(schema as ConnectableModuleSchema<Delay, DelayParam>);
       case 'gain':
-        return fromGainSchema(schema as ConnectableModuleSchema<Gain, GainParam>, audioContext);
+        return fromGainSchema(schema as ConnectableModuleSchema<Gain, GainParam>);
       case 'oscillator':
-        return fromOscillatorSchema(schema as ConnectableModuleSchema<Oscillator, OscillatorParam>, audioContext);
+        return fromOscillatorSchema(schema as ConnectableModuleSchema<Oscillator, OscillatorParam>);
       case 'biquad_filter':
-        return fromBiquadFilterSchema(schema as ConnectableModuleSchema<BiquadFilter, BiquadFilterParam>, audioContext);
+        return fromBiquadFilterSchema(schema as ConnectableModuleSchema<BiquadFilter, BiquadFilterParam>);
       case 'speaker_out':
-        return fromSpeakerOutSchema(schema as OutModuleSchema<SpeakerOut>, audioContext);
+        return fromSpeakerOutSchema(schema as OutModuleSchema<SpeakerOut>);
       case 'mic_in':
-        return fromMicInSchema(schema as ConnectableModuleSchema<MicIn, MicInParam>, audioContext);
+        return fromMicInSchema(schema as ConnectableModuleSchema<MicIn, MicInParam>);
     }
   });
 
