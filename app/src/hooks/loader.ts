@@ -89,7 +89,10 @@ const fromOscillatorSchema = (schema: ConnectableModuleSchema<Oscillator, Oscill
     brand: 'oscillator',
     position: schema.position,
     destinations: schema.destinations,
-    param: schema.param,
+    param: {
+      ...schema.param,
+      isPlaying: false,
+    },
   }
 }
 

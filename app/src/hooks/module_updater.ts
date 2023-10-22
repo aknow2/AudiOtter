@@ -328,6 +328,8 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
             }
             return acc;
           }, []);
+        state.webAudio.node.delete(module.id);
+        state.webAudio.node.set(module.id, newNode);
         destinations.forEach(([desModule, des]) => {
           connect(module, desModule, des, state.webAudio.context, state.webAudio.node);
         });
@@ -335,7 +337,6 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
         newNode.frequency.value = param.frequency.value;
         newNode.detune.value = param.detune.value;
         module.param = param
-        state.webAudio.node.set(module.id, newNode);
       }
       break;
     }
