@@ -3,8 +3,12 @@ export interface Position {
   y: number;
 }
 
+type AudioNodeParam <T extends AudioNodeOptions> = {
+  [K in keyof T]: T[K] extends (number | undefined) ? { min: number, max: number, step: number, value: number } : T[K];
+}
+
 type BaseModuleParam<T extends AudioNodeOptions, O extends keyof T = never> = Omit<
-  Required<T>,'channelCount' | 'channelCountMode' | 'channelInterpretation' | O> 
+  Required<AudioNodeParam<T>>,'channelCount' | 'channelCountMode' | 'channelInterpretation' | O> 
 export interface BaseModule {
   id: string;
   position: Position;

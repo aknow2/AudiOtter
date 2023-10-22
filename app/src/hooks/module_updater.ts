@@ -42,31 +42,32 @@ const createNode = (module: ConnectableModule, context: AudioContext): AudioNode
   switch (module.brand) {
     case 'delay': {
       const node = new DelayNode(context, {
-        delayTime: module.param.delayTime,
+        delayTime: module.param.delayTime.value,
+        maxDelayTime: module.param.maxDelayTime.value,
       });
       return node;
     }
     case 'biquad_filter': {
       const node = new BiquadFilterNode(context, {
-        Q: module.param.Q,
-        frequency: module.param.frequency,
-        detune: module.param.detune,
-        gain: module.param.gain,
+        Q: module.param.Q.value,
+        frequency: module.param.frequency.value,
+        detune: module.param.detune.value,
+        gain: module.param.gain.value,
         type: module.param.type,
       });
       return node;
     }
     case 'gain': {
       const node = new GainNode(context, {
-        gain: module.param.gain,
+        gain: module.param.gain.value,
       });
       return node;
     }
     case 'oscillator': {
       const node = new OscillatorNode(context, {
         type: module.param.type,
-        frequency: module.param.frequency,
-        detune: module.param.detune,
+        frequency: module.param.frequency.value,
+        detune: module.param.detune.value,
       });
       return node;
     }
@@ -162,8 +163,18 @@ const createDelay = (param: CreateModuleParam): Delay => {
       y: param.y,
     },
     param: {
-      delayTime: 0.1,
-      maxDelayTime: 10,
+      delayTime: {
+        value: 0.1,
+        min: 0,
+        max: 10,
+        step: 0.1,
+      },
+      maxDelayTime: {
+        value: 10,
+        min: 0,
+        max: 10,
+        step: 0.1,
+      },
     },
     destinations: [],
   }
@@ -180,10 +191,30 @@ const createBiquadFilter = (param: CreateModuleParam): BiquadFilter => {
     },
     param: {
       type: 'lowpass',
-      frequency: 350,
-      detune: 0,
-      Q: 1,
-      gain: 0,
+      frequency: {
+        value: 300,
+        min: 0,
+        max: 1000,
+        step: 1,
+      },
+      Q: {
+        value: 1,
+        min: 0,
+        max: 10,
+        step: 0.1,
+      },
+      gain: {
+        value: 1,
+        min: 0,
+        max: 10,
+        step: 0.1,
+      },
+      detune: {
+        value: 1,
+        min: 0,
+        max: 10,
+        step: 0.1,
+      },
     },
     destinations: [],
   }
@@ -198,7 +229,12 @@ const createGainModule = ( param: CreateModuleParam): Gain => {
       y: param.y,
     },
     param: {
-      gain: 0.3,
+      gain: {
+        value: 1,
+        min: 0,
+        max: 10,
+        step: 0.1,
+      },
     },
     destinations: [],
   }
@@ -215,8 +251,18 @@ const createOscillator = (param: CreateModuleParam): Oscillator => {
     param: {
       isPlaying: false,
       type: 'sine',
-      frequency: 440,
-      detune: 0,
+      frequency: {
+        value: 300,
+        min: 0,
+        max: 1000,
+        step: 1,
+      },
+      detune: {
+        value: 1,
+        min: 0,
+        max: 10,
+        step: 0.1,
+      },
     },
     destinations: [],
   }
@@ -229,7 +275,7 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
       module.param = param;
       const node = state.webAudio.node.get(module.id) as DelayNode;
       if (node) {
-        node.delayTime.value = param.delayTime;
+        node.delayTime.value = param.delayTime.value;
       }
     }
     break;
@@ -238,10 +284,10 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
       const node = state.webAudio.node.get(module.id) as BiquadFilterNode;
       if (node) {
         node.type = param.type;
-        node.frequency.value = param.frequency;
-        node.detune.value = param.detune;
-        node.Q.value = param.Q;
-        node.gain.value = param.gain;
+        node.frequency.value = param.frequency.value;
+        node.detune.value = param.detune.value;
+        node.Q.value = param.Q.value;
+        node.gain.value = param.gain.value;
       }
     }
     break;
@@ -249,7 +295,7 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
       module.param = param
       const node = state.webAudio.node.get(module.id) as GainNode;
       if (node) {
-        node.gain.value = param.gain;
+        node.gain.value = param.gain.value;
       }
     }
     break;
@@ -258,8 +304,8 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
       if (!node) return
       if (module.param.isPlaying === param.isPlaying) {
         node.type = param.type;
-        node.frequency.value = param.frequency;
-        node.detune.value = param.detune;
+        node.frequency.value = param.frequency.value;
+        node.detune.value = param.detune.value;
         module.param = {
           ...param,
         };
@@ -286,8 +332,8 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
           connect(module, desModule, des, state.webAudio.context, state.webAudio.node);
         });
         newNode.type = param.type;
-        newNode.frequency.value = param.frequency;
-        newNode.detune.value = param.detune;
+        newNode.frequency.value = param.frequency.value;
+        newNode.detune.value = param.detune.value;
         module.param = param
         state.webAudio.node.set(module.id, newNode);
       }

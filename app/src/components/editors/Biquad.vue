@@ -7,27 +7,56 @@
     <div>
       <Dropdown :label="`Type ${param.type}`" :items="filterTypes.map((type) => ({ value: type, label: type }))" :selected="param.type" :on-select="(v) => onUpdate('type', v as BiquadFilterType)" />
     </div>
+
     <div>
-      <RangeSlider :step="1" :min="-400" :max="400" :on-change="(n) => onUpdate('gain', n) " :value="param.gain" :label="`Gain ${param.gain}`" />
+      <RangeSlider
+        :step="param.frequency.step"
+        :min="item.param.frequency.min"
+        :max="param.frequency.max"
+        :on-change="(value) => onUpdate('frequency', { ...param.frequency, value }) "
+        :value="param.frequency.value"
+        :label="`Frequency ${param.frequency.value}`"
+      />
     </div>
     <div>
-      <RangeSlider :step="1" :min="10" :max="5000" :on-change="(n) => onUpdate('frequency', n) " :value="param.frequency" :label="`Frequency ${param.frequency}`" />
+      <RangeSlider
+        :step="param.Q.step"
+        :min="param.Q.min"
+        :max="param.Q.max"
+        :on-change="value => onUpdate('Q', { ...param.Q, value }) "
+        :value="param.Q.value"
+        :label="`Q factor ${param.Q.value}`"
+      />
     </div>
     <div>
-      <RangeSlider :step="0.01" :min="0.01" :max="10" :on-change="(n) => onUpdate('Q', n) " :value="param.Q" :label="`Q factor ${param.Q}`" />
+      <RangeSlider
+        :step="param.detune.step"
+        :min="param.detune.min"
+        :max="param.detune.max"
+        :on-change="(value) => onUpdate('detune', { ...param.detune, value })"
+        :value="param.detune.value"
+        :label="`Detune ${param.detune.value}`"
+      />
     </div>
     <div>
-      <RangeSlider :step="1" :min="-100" :max="100" :on-change="(n) => onUpdate('detune', n) " :value="param.detune" :label="`Detune ${param.detune}`" />
+      <RangeSlider
+        :step="param.gain.step"
+        :min="param.gain.min"
+        :max="param.gain.max"
+        :on-change="(value) => onUpdate('gain', {...param.gain, value}) "
+        :value="param.gain.value"
+        :label="`Gain ${param.gain.value}`"
+      />
     </div>
   </div>
 </template>
 <script lang="ts" setup>
-import { defineProps } from 'vue'
+import { computed, defineProps } from 'vue'
 import ContainButton from '../ContainButton.vue';
 import RangeSlider from '../RangeSlider.vue';
 import Dropdown from '../Dropdown.vue';
-import useConnectableModuleEditor from './hooks';
-import { BiquadFilter, UpdateModuleEvent } from '../../hooks/types';
+import { OnUpdateParam } from './types';
+import { BiquadFilter, UpdateBiquadFilterEvent, UpdateModuleEvent } from '../../hooks/types';
 
 const filterTypes: BiquadFilterType[] = [
   'lowpass',
@@ -46,10 +75,18 @@ const props = defineProps<{
   onChange: (event: UpdateModuleEvent) => void,
 }>();
 
-const { param, onUpdate } = useConnectableModuleEditor({
-  brand: 'biquad_filter',
-  module: props.item,
-  param: props.item.param,
-}, props.onChange);
+
+const param = computed(() => props.item.param);
+const onUpdate: OnUpdateParam<UpdateBiquadFilterEvent> = (key, value) => {
+  props.onChange({
+    brand: 'biquad_filter',
+    param: {
+      ...props.item.param,
+      [key]: value,
+    },
+    module: props.item,
+  } as UpdateBiquadFilterEvent)
+}
+
 
 </script>

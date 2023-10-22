@@ -24,10 +24,30 @@ const loadSample = async (audioContext: AudioContext) => {
       y: 200,
     },
     param: {
-      frequency: 300,
-      Q: 1,
-      gain: 1,
-      detune: 1,
+      frequency: {
+        value: 1000,
+        min: 10,
+        max: 10000,
+        step: 1,
+      },
+      Q: {
+        value: 1,
+        min: 0.001,
+        max: 1000,
+        step: 0.001,
+      },
+      gain: {
+        value: 0,
+        min: -40,
+        max: 40,
+        step: 0.1,
+      },
+      detune: {
+        value: 0,
+        min: -4800,
+        max: 4800,
+        step: 1,
+      },
       type: 'lowpass',
     },
     destinations: [{ target: 'node', id: speakerOut.id }],
@@ -41,8 +61,18 @@ const loadSample = async (audioContext: AudioContext) => {
       y: 50,
     },
     param: {
-      delayTime: 0.1,
-      maxDelayTime: 10,
+      delayTime: {
+        value: 0.1,
+        min: 0,
+        max: 10,
+        step: 0.1,
+      },
+      maxDelayTime: {
+        value: 1,
+        min: 0,
+        max: 10,
+        step: 0.1,
+      },
     },
     destinations: [{ target: 'node', id: quadFilter.id }],
   }
@@ -57,7 +87,12 @@ const loadSample = async (audioContext: AudioContext) => {
       y: 100,
     },
     param: {
-      gain: gain.gain.value,
+      gain: {
+        value: 0.1,
+        min: 0,
+        max: 1,
+        step: 0.01,
+      },
     },
     destinations: [{ target: 'node', id: delayModule.id }],
   }
@@ -81,7 +116,7 @@ const loadSample = async (audioContext: AudioContext) => {
 }
 
 
-const storageKey = 'AudioOtterModules';
+const storageKey = 'AudioOtterModules1';
 const initModules = async (audioContext: AudioContext): Promise<Module[]> => {
 
   const loadedModules = await loadModules(storageKey);

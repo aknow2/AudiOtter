@@ -2,19 +2,27 @@
   <div class="w-full">
     <div class="mb-4 flex justify-between">
       <span class=" text-gray-100 text-2xl"> Delay </span>
-      <ContainButton color="delete" @click="() => props.onDelete(props.item.id)" > Delete </ContainButton>
+      <ContainButton
+        color="delete"
+        @click="() => props.onDelete(props.item.id)" > Delete </ContainButton>
     </div>
     <div>
-      <RangeSlider :step="0.01" :min="0" :max="5" :on-change="(n) => onUpdate('delayTime', n) " :value="param.delayTime" :label="`Delay time ${param.delayTime}`" />
+      <RangeSlider
+        :step="param.delayTime.step"
+        :min="param.delayTime.min"
+        :max="param.delayTime.max"
+        :on-change="(value) => onUpdate('delayTime', { ...param.delayTime, value }) "
+        :value="param.delayTime.value"
+        :label="`Delay time ${param.delayTime.value}`" />
     </div>
   </div>
 </template>
 <script lang="ts" setup>
-import { defineProps } from 'vue'
+import { computed, defineProps } from 'vue'
 import ContainButton from '../ContainButton.vue';
 import RangeSlider from '../RangeSlider.vue';
-import useConnectableModuleEditor from './hooks';
-import { Delay, UpdateModuleEvent } from '../../hooks/types';
+import { OnUpdateParam } from './types';
+import { Delay, UpdateDelayEvent, UpdateModuleEvent } from '../../hooks/types';
 
 const props = defineProps<{
   item: Delay,
@@ -22,11 +30,18 @@ const props = defineProps<{
   onChange: (event: UpdateModuleEvent) => void,
 }>();
 
-const { param, onUpdate } = useConnectableModuleEditor({
-  brand: 'delay',
-  module: props.item,
-  param: props.item.param,
-}, props.onChange);
+const param = computed(() => props.item.param);
+
+const onUpdate: OnUpdateParam<UpdateDelayEvent> = (key, value) => {
+  props.onChange({
+    brand: 'delay',
+    param: {
+      ...props.item.param,
+      [key]: value,
+    },
+    module: props.item,
+  } as UpdateDelayEvent)
+}
 
 </script>
 

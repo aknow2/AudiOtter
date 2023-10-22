@@ -5,8 +5,13 @@
       <ContainButton color="delete" @click="() => props.onDelete(props.item.id)" > Delete </ContainButton>
     </div>
     <div>
-      <RangeSlider :step="0.01" :min="0" :max="5" :on-change="(n) => onUpdate('gain', n) " :value="param.gain"
-          :label="`Gain ${param.gain}`" />
+      <RangeSlider
+        :step="item.param.gain.step"
+        :min="item.param.gain.min"
+        :max="item.param.gain.max"
+        :on-change="(value) => onUpdate('gain', { ...item.param.gain, value }) "
+        :value="item.param.gain.value"
+        :label="`Gain ${item.param.gain.value}`" />
     </div>
   </div>
 </template>
@@ -14,8 +19,8 @@
 import { defineProps } from 'vue'
 import ContainButton from '../ContainButton.vue';
 import RangeSlider from '../RangeSlider.vue';
-import useConnectableModuleEditor from './hooks';
-import { Gain, UpdateModuleEvent } from '../../hooks/types';
+import { OnUpdateParam } from './types';
+import { Gain, UpdateGainEvent, UpdateModuleEvent } from '../../hooks/types';
 
 const props = defineProps<{
   item: Gain,
@@ -23,11 +28,16 @@ const props = defineProps<{
   onChange: (event: UpdateModuleEvent) => void,
 }>();
 
-const { param, onUpdate } = useConnectableModuleEditor({
-  brand: 'gain',
-  module: props.item,
-  param: props.item.param,
-}, props.onChange);
+const onUpdate: OnUpdateParam<UpdateGainEvent> = (key, value) => {
+  props.onChange({
+    brand: 'gain',
+    param: {
+      ...props.item.param,
+      [key]: value,
+    },
+    module: props.item,
+  } as UpdateGainEvent)
+}
 
 </script>
 

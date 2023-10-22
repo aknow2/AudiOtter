@@ -13,23 +13,33 @@
       <Dropdown :label="`Type ${param.type}`" :items="oscTypes.map((type) => ({ value: type, label: type }))" :selected="param.type" :on-select="(v) => onUpdate('type', v as OscillatorType)" />
     </div>
     <div>
-      <RangeSlider :step="1" :min="0" :max="7000" :on-change="(n) => onUpdate('frequency', n) " :value="param.frequency"
-          :label="`Frequency ${param.frequency}`" />
+      <RangeSlider
+        :step="param.frequency.step"
+        :min="param.frequency.min"
+        :max="param.frequency.max"
+        :on-change="(value) => onUpdate('frequency', { ...param.frequency, value }) "
+        :value="param.frequency.value"
+        :label="`Frequency ${param.frequency.value}`" />
     </div>
     <div>
-      <RangeSlider :step="1" :min="-100" :max="100" :on-change="(n) => onUpdate('detune', n) " :value="param.detune"
-            :label="`Detune ${param.detune}`" />
+      <RangeSlider
+        :step="param.detune.step"
+        :min="-100"
+        :max="100"
+        :on-change="(value) => onUpdate('detune', { ...param.detune, value }) "
+        :value="param.detune.value"
+        :label="`Detune ${param.detune.value}`" />
     </div>
   </div>
 </template>
 <script lang="ts" setup>
-import { defineProps } from 'vue'
+import { computed, defineProps } from 'vue'
 import ContainButton from '../ContainButton.vue';
 import RangeSlider from '../RangeSlider.vue';
 import Dropdown from '../Dropdown.vue';
-import useConnectableModuleEditor from './hooks';
 import PlayBtn from '../Palettes/PaletteItem.vue';
-import { Oscillator, UpdateModuleEvent } from '../../hooks/types';
+import { Oscillator, UpdateModuleEvent, UpdateOscillatorEvent } from '../../hooks/types';
+import { OnUpdateParam } from './types';
 
 const oscTypes: OscillatorType[] = [
   'sine',
@@ -44,11 +54,18 @@ const props = defineProps<{
   onChange: (event: UpdateModuleEvent) => void,
 }>();
 
-const { param, onUpdate } = useConnectableModuleEditor({
-  brand: 'oscillator',
-  module: props.item,
-  param: props.item.param,
-}, props.onChange);
+const param = computed(() => props.item.param);
+
+const onUpdate: OnUpdateParam<UpdateOscillatorEvent> = (key, value) => {
+  props.onChange({
+    brand: 'oscillator',
+    param: {
+      ...props.item.param,
+      [key]: value,
+    },
+    module: props.item,
+  } as UpdateOscillatorEvent)
+}
 
 </script>
 
