@@ -10,25 +10,25 @@
       </PlayBtn>
     </div>
     <div>
-      <Dropdown :label="`Type ${param.type}`" :items="oscTypes.map((type) => ({ value: type, label: type }))" :selected="param.type" :on-select="(v) => onUpdate('type', v as OscillatorType)" />
+      <Dropdown :label="`Type`" :items="oscTypes.map((type) => ({ value: type, label: type }))" :selected="param.type" :on-select="(v) => onUpdate('type', v as OscillatorType)" />
     </div>
     <div>
       <RangeSlider
         :step="param.frequency.step"
         :min="param.frequency.min"
         :max="param.frequency.max"
-        :on-change="(value) => onUpdate('frequency', { ...param.frequency, value }) "
+        :on-change="(value) => onUpdate('frequency', { ...param.frequency, ...value }) "
         :value="param.frequency.value"
-        :label="`Frequency ${param.frequency.value}`" />
+        :label="`Frequency`" />
     </div>
     <div>
       <RangeSlider
         :step="param.detune.step"
-        :min="-100"
-        :max="100"
-        :on-change="(value) => onUpdate('detune', { ...param.detune, value }) "
+        :min="param.detune.min"
+        :max="param.detune.max"
+        :on-change="(value) => onUpdate('detune', { ...param.detune, ...value }) "
         :value="param.detune.value"
-        :label="`Detune ${param.detune.value}`" />
+        :label="`Detune`" />
     </div>
   </div>
 </template>

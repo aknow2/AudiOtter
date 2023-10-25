@@ -9,9 +9,9 @@
         :step="item.param.gain.step"
         :min="item.param.gain.min"
         :max="item.param.gain.max"
-        :on-change="(value) => onUpdate('gain', { ...item.param.gain, value }) "
+        :on-change="(value) => onUpdate('gain', { ...item.param.gain, ...value }) "
         :value="item.param.gain.value"
-        :label="`Gain ${item.param.gain.value}`" />
+        :label="`Gain`" />
     </div>
   </div>
 </template>

@@ -141,6 +141,7 @@ const createToolCreator = (param: CreateToolParam) => {
     case 'biquad_filter':
     case 'oscillator':
     case 'gain':
+    case 'wave_shaper':
       return createCreateModuleTool(param)
     default:
       return createDefaultIntractiveTool

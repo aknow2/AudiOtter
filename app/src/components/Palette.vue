@@ -19,6 +19,7 @@ import DelayIcon from '../assets/icons/delay.svg'
 import BiquadIcon from '../assets/icons/biquad.svg'
 import GainIcon from '../assets/icons/gain.svg'
 import OscillatorIcon from '../assets/icons/oscillator.svg'
+import WaveShaperIcon from '../assets/icons/wave_shaper.svg'
 import { CreateToolParam } from '../hooks/intractive_tool';
 
 const { selectedPalette, changeTool } = inject(audioOtterStateKey) as AudiOtterComposition
@@ -65,6 +66,13 @@ const createPatteItemData = (param:  CreateToolParam) => {
         label: 'Osc.',
         pressed: selected
       }
+    case 'wave_shaper': 
+      return {
+        icon: WaveShaperIcon,
+        onClick: () => changeTool(selected ? defaultToolParam : param),
+        label: 'Shaper',
+        pressed: selected
+      }
     default:
       throw new Error('invalid type')
   }
@@ -77,6 +85,7 @@ const items = computed(() => {
     createPatteItemData({ type: 'biquad_filter'}),
     createPatteItemData({ type: 'gain'}),
     createPatteItemData({ type: 'oscillator'}),
+    createPatteItemData({ type: 'wave_shaper'}),
   ]
 })
 

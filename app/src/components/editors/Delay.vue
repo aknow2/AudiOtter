@@ -11,9 +11,9 @@
         :step="param.delayTime.step"
         :min="param.delayTime.min"
         :max="param.delayTime.max"
-        :on-change="(value) => onUpdate('delayTime', { ...param.delayTime, value }) "
+        :on-change="(value) => onUpdate('delayTime', { ...param.delayTime, ...value }) "
         :value="param.delayTime.value"
-        :label="`Delay time ${param.delayTime.value}`" />
+        :label="`Delay time`" />
     </div>
   </div>
 </template>

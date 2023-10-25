@@ -1,14 +1,12 @@
-import { BiquadFilter, BiquadFilterParam, ConnectableModule, Delay, DelayParam, Gain, GainParam, MicIn, MicInParam, Module, ModuleParam, Oscillator, OscillatorParam, OutModule, SpeakerOut } from "./types";
+import { BiquadFilter, ConnectableModule, Delay, Gain, MicIn, Module, Oscillator, OutModule, SpeakerOut, WaveShaper } from "./types";
 
-type ConnectableModuleSchema<T extends ConnectableModule, P extends ModuleParam> = Omit<T, 'source'> & {
-  param: P
-}
+type ConnectableModuleSchema = ConnectableModule;
 
-type OutModuleSchema<T extends OutModule> = Omit<T, 'context'>
+type OutModuleSchema = OutModule;
 
-type Schema = ConnectableModuleSchema<ConnectableModule, ModuleParam> | OutModuleSchema<OutModule>
+type Schema = ConnectableModuleSchema | OutModuleSchema;
 
-const toMicInSchema = (module: MicIn): ConnectableModuleSchema<MicIn, MicInParam> => {
+const toMicInSchema = (module: MicIn): MicIn => {
   return {
     id: module.id,
     brand: 'mic_in',
@@ -18,7 +16,7 @@ const toMicInSchema = (module: MicIn): ConnectableModuleSchema<MicIn, MicInParam
   }
 }
 
-const fromMicInSchema = async (schema: ConnectableModuleSchema<MicIn, MicInParam>): Promise<MicIn> => {
+const fromMicInSchema = async (schema: MicIn): Promise<MicIn> => {
   const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
   return {
@@ -32,7 +30,7 @@ const fromMicInSchema = async (schema: ConnectableModuleSchema<MicIn, MicInParam
   }
 }
 
-const toDelaySchema = (module: Delay): ConnectableModuleSchema<Delay, DelayParam> => {
+const toDelaySchema = (module: Delay): Delay => {
   return {
     id: module.id,
     brand: 'delay',
@@ -42,7 +40,7 @@ const toDelaySchema = (module: Delay): ConnectableModuleSchema<Delay, DelayParam
   }
 }
 
-const fromDelaySchema = (schema: ConnectableModuleSchema<Delay, DelayParam>): Delay => {
+const fromDelaySchema = (schema: Delay): Delay => {
   return {
     id: schema.id,
     param: schema.param,
@@ -52,7 +50,7 @@ const fromDelaySchema = (schema: ConnectableModuleSchema<Delay, DelayParam>): De
   }
 }
 
-const toGainSchema = (module: Gain): ConnectableModuleSchema<Gain, GainParam> => {
+const toGainSchema = (module: Gain): Gain => {
   return {
     id: module.id,
     brand: 'gain',
@@ -62,7 +60,7 @@ const toGainSchema = (module: Gain): ConnectableModuleSchema<Gain, GainParam> =>
   }
 }
 
-const fromGainSchema = (schema: ConnectableModuleSchema<Gain, GainParam>): Gain => {
+const fromGainSchema = (schema: Gain): Gain => {
 
   return {
     id: schema.id,
@@ -73,7 +71,7 @@ const fromGainSchema = (schema: ConnectableModuleSchema<Gain, GainParam>): Gain 
   }
 }
 
-const toOscillatorSchema = (module: Oscillator): ConnectableModuleSchema<Oscillator, OscillatorParam> => {
+const toOscillatorSchema = (module: Oscillator): Oscillator => {
   return {
     id: module.id,
     brand: 'oscillator',
@@ -83,7 +81,7 @@ const toOscillatorSchema = (module: Oscillator): ConnectableModuleSchema<Oscilla
   }
 }
 
-const fromOscillatorSchema = (schema: ConnectableModuleSchema<Oscillator, OscillatorParam>): Oscillator => {
+const fromOscillatorSchema = (schema: Oscillator): Oscillator => {
   return {
     id: schema.id,
     brand: 'oscillator',
@@ -96,7 +94,7 @@ const fromOscillatorSchema = (schema: ConnectableModuleSchema<Oscillator, Oscill
   }
 }
 
-const toBiquadFilterSchema = (module: BiquadFilter): ConnectableModuleSchema<BiquadFilter, BiquadFilterParam> => {
+const toBiquadFilterSchema = (module: BiquadFilter): BiquadFilter => {
   return {
     id: module.id,
     brand: 'biquad_filter',
@@ -106,7 +104,7 @@ const toBiquadFilterSchema = (module: BiquadFilter): ConnectableModuleSchema<Biq
   }
 }
 
-const fromBiquadFilterSchema = (schema: ConnectableModuleSchema<BiquadFilter, BiquadFilterParam>): BiquadFilter => {
+const fromBiquadFilterSchema = (schema: BiquadFilter): BiquadFilter => {
   return {
     id: schema.id,
     brand: 'biquad_filter',
@@ -116,7 +114,7 @@ const fromBiquadFilterSchema = (schema: ConnectableModuleSchema<BiquadFilter, Bi
   }
 }
 
-const toSpeakerOutSchema = (module: SpeakerOut): OutModuleSchema<SpeakerOut> => {
+const toSpeakerOutSchema = (module: SpeakerOut): SpeakerOut => {
   return {
     id: module.id,
     brand: 'speaker_out',
@@ -125,12 +123,40 @@ const toSpeakerOutSchema = (module: SpeakerOut): OutModuleSchema<SpeakerOut> => 
   }
 }
 
-const fromSpeakerOutSchema = (schema: OutModuleSchema<SpeakerOut>): SpeakerOut => {
+const fromSpeakerOutSchema = (schema: SpeakerOut): SpeakerOut => {
   return {
     id: schema.id,
     brand: 'speaker_out',
     position: schema.position,
     destinations: schema.destinations,
+  }
+}
+
+const toWaveShaperSchema = (module: WaveShaper): WaveShaper => {
+  const curve = Array.from(module.param.curve);
+  return {
+      id: module.id,
+      brand: 'wave_shaper',
+      position: module.position,
+      destinations: module.destinations,
+      param: {
+        ...module.param,
+        curve,
+      },
+    }
+}
+
+const fromWaveShaperSchema = (schema: WaveShaper): WaveShaper => {
+
+  return {
+    id: schema.id,
+    brand: 'wave_shaper',
+    position: schema.position,
+    destinations: schema.destinations,
+    param: {
+      ...schema.param,
+      curve: new Float32Array(schema.param.curve),
+    },
   }
 }
 
@@ -150,6 +176,8 @@ export const saveModules = (modules: Module[], storageKey: string) => {
         return toMicInSchema(module);
       case 'speaker_out':
         return toSpeakerOutSchema(module);
+      case 'wave_shaper':
+        return toWaveShaperSchema(module);
     }
   });
 
@@ -167,17 +195,21 @@ export const loadModules = async (storageKey: string): Promise< Module[] | undef
   const modules = schemas.map(schema => {
     switch (schema.brand) {
       case 'delay':
-        return fromDelaySchema(schema as ConnectableModuleSchema<Delay, DelayParam>);
+        return fromDelaySchema(schema);
       case 'gain':
-        return fromGainSchema(schema as ConnectableModuleSchema<Gain, GainParam>);
+        return fromGainSchema(schema);
       case 'oscillator':
-        return fromOscillatorSchema(schema as ConnectableModuleSchema<Oscillator, OscillatorParam>);
+        return fromOscillatorSchema(schema);
       case 'biquad_filter':
-        return fromBiquadFilterSchema(schema as ConnectableModuleSchema<BiquadFilter, BiquadFilterParam>);
+        return fromBiquadFilterSchema(schema);
       case 'speaker_out':
-        return fromSpeakerOutSchema(schema as OutModuleSchema<SpeakerOut>);
+        return fromSpeakerOutSchema(schema);
       case 'mic_in':
-        return fromMicInSchema(schema as ConnectableModuleSchema<MicIn, MicInParam>);
+        return fromMicInSchema(schema);
+      case 'wave_shaper':
+        return fromWaveShaperSchema(schema);
+      default:
+        throw new Error(`Unknown module brand: ${schema}`);
     }
   });
 

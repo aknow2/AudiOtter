@@ -21,6 +21,9 @@
       <template v-else-if="selectedItem?.brand === 'oscillator'">
         <Oscillator :on-change="updateModuleEvent" :item="selectedItem" :on-delete="onDeleteModule" />
       </template>
+      <template v-else-if="selectedItem?.brand === 'wave_shaper'">
+        <WaveShaper :on-change="updateModuleEvent" :item="selectedItem" :on-delete="onDeleteModule" />
+      </template>
       <template v-else>
         <Palette />
       </template>
@@ -37,6 +40,7 @@ import Palette from './Palette.vue';
 import Delay from './editors/Delay.vue';
 import Gain from './editors/Gain.vue';
 import Oscillator from './editors/Oscillator.vue';
+import WaveShaper from './editors/WaveShaper.vue';
 
 const {
   selectedItem,

@@ -1,12 +1,13 @@
 import { nanoid } from "nanoid";
-import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, UpdateModuleEvent, Gain, Oscillator, DestinationInfo, NodeMap } from "./types";
+import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, UpdateModuleEvent, Gain, Oscillator, DestinationInfo, NodeMap, WaveShaper, CurveType } from "./types";
 
 export const isConnectableModule = (module: Module|undefined): module is ConnectableModule => {
   return module?.brand === 'mic_in'
     || module?.brand === 'biquad_filter'
     || module?.brand === 'delay'
     || module?.brand === 'gain'
-    || module?.brand === 'oscillator';
+    || module?.brand === 'oscillator'
+    || module?.brand === 'wave_shaper';
 }
 
 const isOutModule = (module: Module|undefined): module is OutModule => {
@@ -73,6 +74,13 @@ const createNode = (module: ConnectableModule, context: AudioContext): AudioNode
     }
     case "mic_in": {
       const node = context.createMediaStreamSource(module.param.stream);
+      return node;
+    }
+    case "wave_shaper": {
+      const node = new WaveShaperNode(context, {
+        curve: module.param.curve,
+        oversample: module.param.oversample,
+      });
       return node;
     }
   }
@@ -340,8 +348,92 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
       }
       break;
     }
+    case 'wave_shaper': {
+      const curve = createCurve(param.curveType, param.amount.value);
+      module.param = {
+        ...param,
+        curve,
+      }
+      const node = state.webAudio.node.get(module.id) as WaveShaperNode;
+      if (node) {
+        node.oversample = param.oversample;
+        node.curve = curve as Float32Array;
+      }
+      break
+    }
     default:
-      throw new Error('not support')
+      throw new Error('Fail to update module')
+  }
+}
+
+
+const createCurve = (type: CurveType, amount: number): Float32Array => {
+    const samples = 44100; // This is a common value; you might want to adjust based on your needs
+    let curve= new Float32Array(samples);
+
+    switch (type) {
+        case 'distortion':
+            for (let i = 0; i < samples; ++i) {
+                const x = (i * 2) / samples - 1;
+                curve[i] = (Math.PI + amount) * x / (Math.PI + (amount * Math.abs(x)));
+            }
+            break;
+        case 'fuzz':
+            for (let i = 0; i < samples; ++i) {
+                const x = (i * 2) / samples - 1;
+                curve[i] = x * Math.abs(x) / (Math.pow(x, 2) + (amount - 1) * Math.abs(x) + 1);
+            }
+            break;
+        case 'overdrive':
+            for (let i = 0; i < samples; ++i) {
+                const x = (i * 2) / samples - 1;
+                if (x < 0) {
+                    curve[i] = -(1 / (1 - x) - 1);
+                } else {
+                    curve[i] = 1 / (1 + x) - 1;
+                }
+            }
+            break;
+        case 'sawtooth':
+            for (let i = 0; i < samples; ++i) {
+                curve[i] = 2 * (i / samples) - 1;
+            }
+            break;
+        case 'none':
+            curve = new Float32Array(samples);
+            for (let i = 0; i < samples; ++i) {
+                curve[i] = (i * 2) / samples - 1;
+            }
+            break;
+        default:
+            throw new Error("Unknown type for WaveShaperNode curve.");
+    }
+
+    return curve;
+}
+
+const createWaveShaper = (param: CreateModuleParam): WaveShaper => {
+  const curveType: CurveType = 'distortion';
+  const amount = 1000;
+  return {
+    id: nanoid(),
+    brand: 'wave_shaper',
+    position: {
+      x: param.x,
+      y: param.y,
+    },
+    param: {
+      curveType,
+      curve: createCurve(curveType, amount),
+      amount: {
+        value: amount,
+        min: 1,
+        max: amount * 4,
+        step: 1,
+      },
+      oversample: '4x',
+    },
+    destinations: [],
   }
 }
 
@@ -355,6 +447,8 @@ const createModule = (param: CreateModuleParam): Module => {
       return createGainModule(param);
     case 'oscillator':
       return createOscillator(param);
+    case 'wave_shaper':
+      return createWaveShaper(param);
     default:
       throw new Error('not support')
   }

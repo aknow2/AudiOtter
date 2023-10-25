@@ -3,9 +3,18 @@ export interface Position {
   y: number;
 }
 
-type AudioNodeParam <T extends AudioNodeOptions> = {
-  [K in keyof T]: T[K] extends (number | undefined) ? { min: number, max: number, step: number, value: number } : T[K];
+export type RangeSetting = {
+  min: number;
+  max: number;
+  step: number;
+  value: number;
 }
+type AudioNodeParam <T extends AudioNodeOptions> = {
+  [K in keyof T]: T[K] extends (number | undefined) ? RangeSetting : T[K];
+}
+type AudioParamKeys<T> = {
+    [K in keyof T]: T[K] extends AudioParam ? K : never;
+}[keyof T];
 
 type BaseModuleParam<T extends AudioNodeOptions, O extends keyof T = never> = Omit<
   Required<AudioNodeParam<T>>,'channelCount' | 'channelCountMode' | 'channelInterpretation' | O> 
@@ -23,9 +32,16 @@ export interface MicIn extends BaseModule {
   param: MicInParam;
 }
 
-type AudioParamKeys<T> = {
-    [K in keyof T]: T[K] extends AudioParam ? K : never;
-}[keyof T];
+export type CurveType = 'none' | 'distortion' | 'fuzz' | 'overdrive' | 'sawtooth';
+export type WaveShaperParam = BaseModuleParam<WaveShaperOptions> & {
+  curveType: CurveType;
+  amount: RangeSetting;
+}
+export interface WaveShaper extends BaseModule {
+  brand: 'wave_shaper';
+  param: WaveShaperParam;
+}
+
 export type BiquadFilterParam = BaseModuleParam<BiquadFilterOptions>
 export type BiquadFilterNodeAudioParamKeys = AudioParamKeys<BiquadFilterNode>;
 export interface BiquadFilter extends BaseModule {
@@ -52,9 +68,7 @@ export interface Oscillator extends BaseModule {
   param: OscillatorParam;
 }
 
-
-export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam | MicInParam;
-
+export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam | MicInParam | WaveShaperParam;
 interface NodeDestination {
   id: string;
   target: 'node';
@@ -68,7 +82,7 @@ interface ParamDestination {
 
 export type DestinationInfo = NodeDestination | ParamDestination;
 
-export type InOutModule =  BiquadFilter | Delay | Gain | MicIn | Oscillator;
+export type InOutModule =  BiquadFilter | Delay | Gain | MicIn | Oscillator | WaveShaper;
 export type InModule = MicIn;
 export type ConnectableModule = InModule | InOutModule;
 
@@ -80,13 +94,15 @@ type BaseUpdateModuleEvent<T extends Module, P extends ModuleParam> = {
 }
 
 export type UpdateBiquadFilterEvent = BaseUpdateModuleEvent<BiquadFilter, BiquadFilterParam>
+export type UpdateWaveShaperEvent = BaseUpdateModuleEvent<WaveShaper, WaveShaperParam>
 export type UpdateDelayEvent = BaseUpdateModuleEvent<Delay, DelayParam>
 export type UpdateGainEvent = BaseUpdateModuleEvent<Gain, GainParam>
 export type UpdateOscillatorEvent = BaseUpdateModuleEvent<Oscillator, OscillatorParam>
 export type UpdateModuleEvent = UpdateBiquadFilterEvent
   | UpdateDelayEvent
   | UpdateGainEvent 
-  | UpdateOscillatorEvent;
+  | UpdateOscillatorEvent
+  | UpdateWaveShaperEvent;
 
 
 export interface SpeakerOut extends BaseModule {

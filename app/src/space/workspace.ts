@@ -4,18 +4,36 @@ import { AudiOtterComposition } from '../hooks/AudiOtterState';
 import { DeepReadonly } from 'vue';
 import { Feedback, AudiOtterState, Module } from '../hooks/types';
 import { IntractiveTool } from '../hooks/intractive_tool';
+import DelayIcon from '../assets/icons/delay.svg';
+import OscillatorIcon from '../assets/icons/oscillator.svg';
+import BiquadSvg from '../assets/icons/biquad.svg';
+import GainSvg from '../assets/icons/gain.svg';
+import MicIcon from '../assets/icons/mic.svg';
+import SpeakerIcon from '../assets/icons/speaker.svg';
+import WaveShaperIcon from '../assets/icons/wave_shaper.svg';
 
-type ModuleLabels = {
+type ModuleMap = {
   [key in Module['brand']]: string;
 }
 
-const moduleLabels: ModuleLabels = {
+const moduleLabels: ModuleMap = {
   'mic_in': 'Mic.',
   'biquad_filter': 'Biquad',
   'delay': 'Delay',
   'speaker_out': 'Speaker',
   'gain': 'Gain',
-  'oscillator': 'Osc.'
+  'oscillator': 'Osc.',
+  'wave_shaper': 'Shaper'
+}
+
+const moduleIcons = {
+  'mic_in': MicIcon,
+  'biquad_filter': BiquadSvg,
+  'delay': DelayIcon,
+  'speaker_out': SpeakerIcon,
+  'gain': GainSvg,
+  'oscillator': OscillatorIcon,
+  'wave_shaper': WaveShaperIcon,
 }
 
 type ModuleColors = {
@@ -41,6 +59,14 @@ const createModuleComponent = (module: Module, selectedItemIds: readonly string[
     .endFill();
   group.addChild(body);
 
+  const texture = PIXI.Texture.from(moduleIcons[brand]);
+  const sprite = new PIXI.Sprite(texture);
+  sprite.anchor.set(0.5);
+  sprite.x = halfOfComponent;
+  sprite.y = halfOfComponent - 5;
+  group.addChild(sprite);
+
+
   const text = new PIXI.Text(moduleLabels[brand], {
      fontFamily: 'Arial',
      fontSize: 14,
@@ -50,7 +76,7 @@ const createModuleComponent = (module: Module, selectedItemIds: readonly string[
 
  text.anchor.set(0.5);
  text.x = halfOfComponent;
- text.y = halfOfComponent;
+ text.y = halfOfComponent + 20;
 
 
   group.addChild(text);
