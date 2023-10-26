@@ -11,6 +11,7 @@ import GainSvg from '../assets/icons/gain.svg';
 import MicIcon from '../assets/icons/mic.svg';
 import SpeakerIcon from '../assets/icons/speaker.svg';
 import WaveShaperIcon from '../assets/icons/wave_shaper.svg';
+import ConvolverIcon from '../assets/icons/convolver.svg';
 
 type ModuleMap = {
   [key in Module['brand']]: string;
@@ -23,7 +24,8 @@ const moduleLabels: ModuleMap = {
   'speaker_out': 'Speaker',
   'gain': 'Gain',
   'oscillator': 'Osc.',
-  'wave_shaper': 'Shaper'
+  'wave_shaper': 'Shaper',
+  'convolver': 'Conv.',
 }
 
 const moduleIcons = {
@@ -34,6 +36,7 @@ const moduleIcons = {
   'gain': GainSvg,
   'oscillator': OscillatorIcon,
   'wave_shaper': WaveShaperIcon,
+  'convolver': ConvolverIcon,
 }
 
 type ModuleColors = {

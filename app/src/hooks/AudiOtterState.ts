@@ -35,7 +35,7 @@ const useAudiOtter = () => {
     linkMap: new Map(),
     selectedItems: [],
     webAudio: {
-      context: new AudioContext(),
+      context: null as any,
       node: new Map(),
     }
   });

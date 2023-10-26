@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
-import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, UpdateModuleEvent, Gain, Oscillator, DestinationInfo, NodeMap, WaveShaper, CurveType } from "./types";
+import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, UpdateModuleEvent, Gain, Oscillator, DestinationInfo, NodeMap, WaveShaper, CurveType, Convolver } from "./types";
+import ir from '../assets/sounds/ir.wav';
 
 export const isConnectableModule = (module: Module|undefined): module is ConnectableModule => {
   return module?.brand === 'mic_in'
@@ -7,7 +8,8 @@ export const isConnectableModule = (module: Module|undefined): module is Connect
     || module?.brand === 'delay'
     || module?.brand === 'gain'
     || module?.brand === 'oscillator'
-    || module?.brand === 'wave_shaper';
+    || module?.brand === 'wave_shaper'
+    || module?.brand === 'convolver';
 }
 
 const isOutModule = (module: Module|undefined): module is OutModule => {
@@ -39,7 +41,7 @@ const getDestination = (node: AudioNode, desInfo: DestinationInfo) => {
   return (node as any)[desInfo.paramKey] as any;
 }
 
-const createNode = (module: ConnectableModule, context: AudioContext): AudioNode => {
+const createNode = async (module: ConnectableModule, context: AudioContext): Promise<AudioNode> => {
   switch (module.brand) {
     case 'delay': {
       const node = new DelayNode(context, {
@@ -83,15 +85,25 @@ const createNode = (module: ConnectableModule, context: AudioContext): AudioNode
       });
       return node;
     }
+    case "convolver": {
+      const res = await fetch(ir);
+      const arrayBuffer = await res.arrayBuffer()
+      const audioBuffer = await context.decodeAudioData(arrayBuffer);
+      const node = new ConvolverNode(context, {
+        buffer: audioBuffer,
+        disableNormalization: false,
+      });
+      return node;
+    }
   }
 }
 
-const getOrCreateNode = (module: ConnectableModule, context: AudioContext, nodeMap: NodeMap): AudioNode => {
+const getOrCreateNode = async (module: ConnectableModule, context: AudioContext, nodeMap: NodeMap): Promise<AudioNode> => {
   const node = nodeMap.get(module.id);
   if (node) {
     return node;
   }
-  const newNode = createNode(module, context);
+  const newNode = await createNode(module, context);
   nodeMap.set(module.id, newNode);
   return newNode;
 }
@@ -103,14 +115,18 @@ const connect = (
   context: AudioContext,
   nodeMap: NodeMap) => {
   
-  const srcNode = getOrCreateNode(srcModule, context, nodeMap);
-  if (isOutModule(desModule)) {
-    srcNode.connect(getDestination(context.destination, desInfo));
-  } else {
-    const desNode = getOrCreateNode(desModule, context, nodeMap);
-    const des =  getDestination(desNode, desInfo)
-    srcNode.connect(des);
-  }
+  getOrCreateNode(srcModule, context, nodeMap)
+    .then((srcNode) => {
+      if (isOutModule(desModule)) {
+        srcNode.connect(context.destination);
+      } else {
+        getOrCreateNode(desModule, context, nodeMap)
+          .then((desNode) => {
+            const des =  getDestination(desNode, desInfo)
+            srcNode.connect(des);
+          })
+      }
+    });
 }
 
 const disconnect = (srcModule: ConnectableModule, desModule: Module, desInfo: DestinationInfo, context: AudioContext, nodeMap: NodeMap) => {
@@ -127,7 +143,7 @@ const disconnect = (srcModule: ConnectableModule, desModule: Module, desInfo: De
     }
     srcNode.disconnect(getDestination(desNode, desInfo))
   } else {
-    srcNode.disconnect(getDestination(context.destination, desInfo))
+    srcNode.disconnect(context.destination)
   }
 }
 
@@ -361,6 +377,10 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
       }
       break
     }
+    case 'convolver': {
+      module.param = param
+      break;
+    }
     default:
       throw new Error('Fail to update module')
   }
@@ -449,8 +469,23 @@ const createModule = (param: CreateModuleParam): Module => {
       return createOscillator(param);
     case 'wave_shaper':
       return createWaveShaper(param);
+    case 'convolver':
+      return createConvolver(param);
     default:
       throw new Error('not support')
+  }
+}
+
+const createConvolver = (param: CreateModuleParam): Convolver => {
+  return {
+    id: nanoid(),
+    brand: 'convolver',
+    position: {
+      x: param.x,
+      y: param.y,
+    },
+    param: {},
+    destinations: [],
   }
 }
 

@@ -85,8 +85,8 @@ export const createConnectingModuleTool = ({state}: ToolContext): IntractiveTool
       updateFeedbackIfExist({ x: position[0], y: position[1] }, state);
     },
     onUp({ itemId }) {
-      const desModule = state.modules.find((m) => m.id === itemId)
       const srcModule =  state.modules.find((m) => m.id === state.feedBack?.srcId)
+      const desModule = state.modules.find((m) => m.id === itemId)
       if (desModule && srcModule) {
         const linkId = createLinkId(srcModule, desModule);
         if (canCreateLink(state.linkMap, srcModule, desModule, linkId)) {
@@ -142,6 +142,7 @@ const createToolCreator = (param: CreateToolParam) => {
     case 'oscillator':
     case 'gain':
     case 'wave_shaper':
+    case 'convolver':
       return createCreateModuleTool(param)
     default:
       return createDefaultIntractiveTool

@@ -1,4 +1,4 @@
-import { BiquadFilter, ConnectableModule, Delay, Gain, MicIn, Module, Oscillator, OutModule, SpeakerOut, WaveShaper } from "./types";
+import { BiquadFilter, ConnectableModule, Convolver, Delay, Gain, MicIn, Module, Oscillator, OutModule, SpeakerOut, WaveShaper } from "./types";
 
 type ConnectableModuleSchema = ConnectableModule;
 
@@ -147,7 +147,6 @@ const toWaveShaperSchema = (module: WaveShaper): WaveShaper => {
 }
 
 const fromWaveShaperSchema = (schema: WaveShaper): WaveShaper => {
-
   return {
     id: schema.id,
     brand: 'wave_shaper',
@@ -160,9 +159,19 @@ const fromWaveShaperSchema = (schema: WaveShaper): WaveShaper => {
   }
 }
 
+const fromConvolverSchema = (schema: Convolver): Convolver => {
+  return {
+    id: schema.id,
+    brand: 'convolver',
+    position: schema.position,
+    destinations: schema.destinations,
+    param: {}
+  }
+}
+
 export const saveModules = (modules: Module[], storageKey: string) => {
 
-  const schemas = modules.map(module => {
+  const schemas = modules.map<Module>(module => {
     switch (module.brand) {
       case 'delay':
         return toDelaySchema(module);
@@ -178,6 +187,8 @@ export const saveModules = (modules: Module[], storageKey: string) => {
         return toSpeakerOutSchema(module);
       case 'wave_shaper':
         return toWaveShaperSchema(module);
+      case "convolver":
+        return module;
     }
   });
 
@@ -192,7 +203,7 @@ export const loadModules = async (storageKey: string): Promise< Module[] | undef
   }
 
   const schemas = JSON.parse(json) as Schema[];
-  const modules = schemas.map(schema => {
+  const modules = schemas.map<Promise<Module>>(async (schema) => {
     switch (schema.brand) {
       case 'delay':
         return fromDelaySchema(schema);
@@ -208,8 +219,8 @@ export const loadModules = async (storageKey: string): Promise< Module[] | undef
         return fromMicInSchema(schema);
       case 'wave_shaper':
         return fromWaveShaperSchema(schema);
-      default:
-        throw new Error(`Unknown module brand: ${schema}`);
+      case 'convolver':
+        return fromConvolverSchema(schema);
     }
   });
 

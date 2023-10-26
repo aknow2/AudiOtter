@@ -32,6 +32,12 @@ export interface MicIn extends BaseModule {
   param: MicInParam;
 }
 
+export type ConvolverParam = BaseModuleParam<{}> 
+export interface Convolver extends BaseModule {
+  brand: 'convolver';
+  param: ConvolverParam;
+}
+
 export type CurveType = 'none' | 'distortion' | 'fuzz' | 'overdrive' | 'sawtooth';
 export type WaveShaperParam = BaseModuleParam<WaveShaperOptions> & {
   curveType: CurveType;
@@ -68,7 +74,7 @@ export interface Oscillator extends BaseModule {
   param: OscillatorParam;
 }
 
-export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam | MicInParam | WaveShaperParam;
+export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam | MicInParam | WaveShaperParam | ConvolverParam;
 interface NodeDestination {
   id: string;
   target: 'node';
@@ -82,7 +88,7 @@ interface ParamDestination {
 
 export type DestinationInfo = NodeDestination | ParamDestination;
 
-export type InOutModule =  BiquadFilter | Delay | Gain | MicIn | Oscillator | WaveShaper;
+export type InOutModule =  BiquadFilter | Delay | Gain | MicIn | Oscillator | WaveShaper | Convolver;
 export type InModule = MicIn;
 export type ConnectableModule = InModule | InOutModule;
 
@@ -98,10 +104,12 @@ export type UpdateWaveShaperEvent = BaseUpdateModuleEvent<WaveShaper, WaveShaper
 export type UpdateDelayEvent = BaseUpdateModuleEvent<Delay, DelayParam>
 export type UpdateGainEvent = BaseUpdateModuleEvent<Gain, GainParam>
 export type UpdateOscillatorEvent = BaseUpdateModuleEvent<Oscillator, OscillatorParam>
+export type UpdateConvolverEvent = BaseUpdateModuleEvent<Convolver, ConvolverParam>
 export type UpdateModuleEvent = UpdateBiquadFilterEvent
   | UpdateDelayEvent
   | UpdateGainEvent 
   | UpdateOscillatorEvent
+  | UpdateConvolverEvent
   | UpdateWaveShaperEvent;
 
 
