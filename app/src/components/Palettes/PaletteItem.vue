@@ -6,8 +6,6 @@
 <script lang="ts" setup>
 import { PropType, computed, defineProps } from 'vue'
 
-
-
 const props = defineProps({
   pressed: {
     type: Boolean,

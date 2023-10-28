@@ -7,19 +7,19 @@ import { loadSample } from "./sample_modules";
 
 
 const storageKey = 'AudioOtterModules1';
-const initModules = async (audioContext: AudioContext): Promise<Module[]> => {
+const initModules = async (): Promise<Module[]> => {
 
   const loadedModules = await loadModules(storageKey);
   if(loadedModules && loadedModules.length > 0) {
     return loadedModules;
   }
 
-  return await loadSample(audioContext);
+  return await loadSample();
 }
 
-const connectModuleAndLink = (modules: Module[], state: AudiOtterState) => {
+const connectModuleAndLink = async (modules: Module[], state: AudiOtterState) => {
   for (const module of modules) {
-    connectModules(module, state);
+    await connectModules(module, state);
   }
 }
 
@@ -41,11 +41,13 @@ const useAudiOtter = () => {
   });
   const { tool, changeTool, selectedPalette } = useIntractiveTool(mutableState);
   const init =  async () => {
+    console.log('init')
     mutableState.webAudio.context = new AudioContext();
+    mutableState.webAudio.context.resume();
     mutableState.status = 'loading';
-    const modules = await initModules(mutableState.webAudio.context);
+    const modules = await initModules();
     mutableState.modules = modules;
-    connectModuleAndLink(modules, mutableState);
+    await connectModuleAndLink(modules, mutableState);
     mutableState.status = 'running';
   };
 

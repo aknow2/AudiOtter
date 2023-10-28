@@ -84,14 +84,14 @@ export const createConnectingModuleTool = ({state}: ToolContext): IntractiveTool
     onMove({ position }) {
       updateFeedbackIfExist({ x: position[0], y: position[1] }, state);
     },
-    onUp({ itemId }) {
+    async onUp({ itemId }) {
       const srcModule =  state.modules.find((m) => m.id === state.feedBack?.srcId)
       const desModule = state.modules.find((m) => m.id === itemId)
       if (desModule && srcModule) {
         const linkId = createLinkId(srcModule, desModule);
         if (canCreateLink(state.linkMap, srcModule, desModule, linkId)) {
           srcModule.destinations.push({ target: 'node', id: desModule.id });
-          connectModules(srcModule, state);
+          await connectModules(srcModule, state);
           state.linkMap = new Map(state.linkMap)
         }
       }
@@ -143,6 +143,7 @@ const createToolCreator = (param: CreateToolParam) => {
     case 'gain':
     case 'wave_shaper':
     case 'convolver':
+    case 'recording':
       return createCreateModuleTool(param)
     default:
       return createDefaultIntractiveTool

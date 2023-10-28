@@ -24,6 +24,9 @@
       <template v-else-if="selectedItem?.brand === 'wave_shaper'">
         <WaveShaper :on-change="updateModuleEvent" :item="selectedItem" :on-delete="onDeleteModule" />
       </template>
+      <template v-else-if="selectedItem?.brand === 'recording'">
+        <Recording  :item="selectedItem" :on-delete="onDeleteModule" :on-change="updateModuleEvent"  />
+      </template>
       <template v-else>
         <Palette />
       </template>
@@ -41,6 +44,7 @@ import Delay from './editors/Delay.vue';
 import Gain from './editors/Gain.vue';
 import Oscillator from './editors/Oscillator.vue';
 import WaveShaper from './editors/WaveShaper.vue';
+import Recording from './editors/Recording.vue';
 
 const {
   selectedItem,
@@ -48,7 +52,7 @@ const {
   onDeleteModule,
   getMutableState,
   state,
-  onChangeModuleDestination
+  onChangeModuleDestination,
 } = inject(audioOtterStateKey) as AudiOtterComposition
 const updateModuleEvent = createModuleUpdater(getMutableState());
 

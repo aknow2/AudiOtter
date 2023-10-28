@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
-import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, UpdateModuleEvent, Gain, Oscillator, DestinationInfo, NodeMap, WaveShaper, CurveType, Convolver } from "./types";
+import { BiquadFilter, Delay, OutModule, Link, LinkMap, AudiOtterState, Module, ModuleBrand, ConnectableModule, UpdateModuleEvent, Gain, Oscillator, DestinationInfo, NodeMap, WaveShaper, CurveType, Convolver, Recording } from "./types";
 import ir from '../assets/sounds/ir.wav';
+import { createRecordingInvoker } from "../components/editors/composable/useRecording";
 
 export const isConnectableModule = (module: Module|undefined): module is ConnectableModule => {
   return module?.brand === 'mic_in'
@@ -12,7 +13,7 @@ export const isConnectableModule = (module: Module|undefined): module is Connect
     || module?.brand === 'convolver';
 }
 
-const isOutModule = (module: Module|undefined): module is OutModule => {
+const isSpeaker = (module: Module|undefined): module is OutModule => {
   return module?.brand === 'speaker_out';
 }
 
@@ -41,7 +42,7 @@ const getDestination = (node: AudioNode, desInfo: DestinationInfo) => {
   return (node as any)[desInfo.paramKey] as any;
 }
 
-const createNode = async (module: ConnectableModule, context: AudioContext): Promise<AudioNode> => {
+const createNode = async (module: ConnectableModule | Recording, context: AudioContext): Promise<AudioNode> => {
   switch (module.brand) {
     case 'delay': {
       const node = new DelayNode(context, {
@@ -95,10 +96,14 @@ const createNode = async (module: ConnectableModule, context: AudioContext): Pro
       });
       return node;
     }
+    case "recording": {
+      const node = context.createMediaStreamDestination();
+      return node;
+    }
   }
 }
 
-const getOrCreateNode = async (module: ConnectableModule, context: AudioContext, nodeMap: NodeMap): Promise<AudioNode> => {
+const getOrCreateNode = async (module: ConnectableModule | Recording, context: AudioContext, nodeMap: NodeMap): Promise<AudioNode> => {
   const node = nodeMap.get(module.id);
   if (node) {
     return node;
@@ -108,25 +113,21 @@ const getOrCreateNode = async (module: ConnectableModule, context: AudioContext,
   return newNode;
 }
 
-const connect = (
+const connect = async (
   srcModule: ConnectableModule,
   desModule: Module,
   desInfo: DestinationInfo,
   context: AudioContext,
   nodeMap: NodeMap) => {
-  
-  getOrCreateNode(srcModule, context, nodeMap)
-    .then((srcNode) => {
-      if (isOutModule(desModule)) {
-        srcNode.connect(context.destination);
-      } else {
-        getOrCreateNode(desModule, context, nodeMap)
-          .then((desNode) => {
-            const des =  getDestination(desNode, desInfo)
-            srcNode.connect(des);
-          })
-      }
-    });
+  const srcNode = await  getOrCreateNode(srcModule, context, nodeMap)
+  console.log(srcModule.brand, 'to', desModule.brand, context.state, nodeMap)
+  if (isSpeaker(desModule)) {
+    srcNode.connect(context.destination);
+  } else {
+    const desNode = await getOrCreateNode(desModule, context, nodeMap)
+    const des =  getDestination(desNode, desInfo)
+    srcNode.connect(des);
+  }
 }
 
 const disconnect = (srcModule: ConnectableModule, desModule: Module, desInfo: DestinationInfo, context: AudioContext, nodeMap: NodeMap) => {
@@ -136,18 +137,18 @@ const disconnect = (srcModule: ConnectableModule, desModule: Module, desInfo: De
     throw new Error('Not found node in nodeMap');
   }
 
-  if (isConnectableModule(desModule)) {
+  if (isSpeaker(desModule)) {
+    srcNode.disconnect(context.destination)
+  } else {
     const desNode = nodeMap.get(desModule.id);
     if (!desNode) {
       throw new Error('Not found node in nodeMap');
     }
     srcNode.disconnect(getDestination(desNode, desInfo))
-  } else {
-    srcNode.disconnect(context.destination)
   }
 }
 
-export const connectModuleProcess = (
+export const connectModuleProcess = async (
   srcModule: Module,
   desModule: Module,
   destination: DestinationInfo,
@@ -157,20 +158,21 @@ export const connectModuleProcess = (
   if (canCreateLink(linkMap, srcModule, desModule, linkId)) {
     const link = createLink(srcModule, desModule, linkId)
     linkMap.set(link.id, link)
-    connect(srcModule, desModule, destination, context, node);
+    await connect(srcModule, desModule, destination, context, node);
   }
 }
 
-export const connectModules = (
+export const connectModules = async (
   srcModule: Module,
   state: AudiOtterState,
 ) => {
-  srcModule.destinations.forEach((destination) => {
+  for (const destination of srcModule.destinations) {
+    console.log('connect', srcModule.id, destination.id)
     const desModule = state.modules.find((m) => m.id === destination.id);
     if (desModule) {
-      connectModuleProcess(srcModule, desModule, destination, state);
+      await connectModuleProcess(srcModule, desModule, destination, state);
     }
-  })
+  }
 }
 
 interface CreateModuleParam {
@@ -293,8 +295,20 @@ const createOscillator = (param: CreateModuleParam): Oscillator => {
 }
 
 
-const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, state: AudiOtterState) => {
+const updateModule = async ({ brand, module, param }: UpdateModuleEvent, state: AudiOtterState) => {
   switch (brand) {
+    case 'recording': {
+      module.param = param
+      if (param.isRecording) {
+        const node = state.webAudio.node.get(module.id) as MediaStreamAudioDestinationNode;
+        if (!node) return
+        const invoker = createRecordingInvoker(node);
+        module.stopRecording = await invoker();
+      } else if (module.stopRecording) {
+        module.stopRecording();
+      }
+      break;
+    }
     case 'delay': {
       module.param = param;
       const node = state.webAudio.node.get(module.id) as DelayNode;
@@ -354,9 +368,12 @@ const updateConnectableModule = ({ brand, module, param }: UpdateModuleEvent, st
           }, []);
         state.webAudio.node.delete(module.id);
         state.webAudio.node.set(module.id, newNode);
-        destinations.forEach(([desModule, des]) => {
-          connect(module, desModule, des, state.webAudio.context, state.webAudio.node);
-        });
+
+        (async () => {
+          for (const [desModule, des] of destinations) {
+            await connect(module, desModule, des, state.webAudio.context, state.webAudio.node);
+          }
+        })().then(() => {});
         newNode.type = param.type;
         newNode.frequency.value = param.frequency.value;
         newNode.detune.value = param.detune.value;
@@ -471,8 +488,26 @@ const createModule = (param: CreateModuleParam): Module => {
       return createWaveShaper(param);
     case 'convolver':
       return createConvolver(param);
-    default:
-      throw new Error('not support')
+    case 'recording':
+      return createRecording(param);
+    case 'speaker_out':
+    case 'mic_in':
+      throw new Error('Not implemented');
+  }
+}
+
+const createRecording = (param: CreateModuleParam): Recording => {
+  return {
+    id: nanoid(),
+    brand: 'recording',
+    position: {
+      x: param.x,
+      y: param.y,
+    },
+    param: {
+      isRecording: false,
+    },
+    destinations: [],
   }
 }
 
@@ -491,7 +526,7 @@ const createConvolver = (param: CreateModuleParam): Convolver => {
 
 export const createModuleUpdater = (state: AudiOtterState) => (ev: UpdateModuleEvent) => {
   const { module } = ev;
-  updateConnectableModule(ev, state);
+  updateModule(ev, state).then(() => {});
   state.modules = state.modules.map((m) => {
     if (m.id === module.id) {
       return module;
@@ -507,7 +542,7 @@ export const createModuleCreator = (state: AudiOtterState) => (param: CreateModu
 
 export const onDeleteModuleHandler = (state: AudiOtterState) => (moduleId: string) => {
   const deleteModule = state.modules.find((m) => m.id === moduleId);
-  if (isConnectableModule(deleteModule)) {
+  if (deleteModule) {
     Array.from(state.linkMap)
       .filter(([_, l]) => l.sourceId === moduleId || l.destinationId === moduleId)
       .forEach(([_, l]) => deleteLink(state, l))
@@ -532,7 +567,7 @@ const deleteLink = (state: AudiOtterState, deleteLink: Link) => {
   state.selectedItems = []
 }
 
-export const changeDestination = (state: AudiOtterState) => (moduleId: string, desInfo: DestinationInfo) => {
+export const changeDestination = (state: AudiOtterState) => async (moduleId: string, desInfo: DestinationInfo) => {
   const module = state.modules.find((m) => m.id === moduleId)
   const oldInfo = module?.destinations.find((d) => d.id === desInfo.id);
   const desModule = state.modules.find((m) => m.id === desInfo.id);
@@ -541,7 +576,7 @@ export const changeDestination = (state: AudiOtterState) => (moduleId: string, d
   }
 
   disconnect(module, desModule, oldInfo, state.webAudio.context, state.webAudio.node);
-  connect(module, desModule, desInfo, state.webAudio.context, state.webAudio.node);
+  await connect(module, desModule, desInfo, state.webAudio.context, state.webAudio.node);
 
   module.destinations = module.destinations.map((d) => {
     if (d.id === desInfo.id) {

@@ -74,7 +74,18 @@ export interface Oscillator extends BaseModule {
   param: OscillatorParam;
 }
 
-export type ModuleParam = BiquadFilterParam | DelayParam | GainParam | OscillatorParam | MicInParam | WaveShaperParam | ConvolverParam;
+export type RecordingParam  = {
+  isRecording: boolean
+}
+export interface Recording extends BaseModule {
+  brand: 'recording';
+  param: RecordingParam;
+  stopRecording?: () => Promise<void>;
+}
+
+export type ModuleParam = 
+  | RecordingParam
+  | BiquadFilterParam | DelayParam | GainParam | OscillatorParam | MicInParam | WaveShaperParam | ConvolverParam;
 interface NodeDestination {
   id: string;
   target: 'node';
@@ -105,18 +116,19 @@ export type UpdateDelayEvent = BaseUpdateModuleEvent<Delay, DelayParam>
 export type UpdateGainEvent = BaseUpdateModuleEvent<Gain, GainParam>
 export type UpdateOscillatorEvent = BaseUpdateModuleEvent<Oscillator, OscillatorParam>
 export type UpdateConvolverEvent = BaseUpdateModuleEvent<Convolver, ConvolverParam>
+export type UpdateRecordingEvent = BaseUpdateModuleEvent<Recording, RecordingParam>
 export type UpdateModuleEvent = UpdateBiquadFilterEvent
   | UpdateDelayEvent
   | UpdateGainEvent 
   | UpdateOscillatorEvent
   | UpdateConvolverEvent
+  | UpdateRecordingEvent
   | UpdateWaveShaperEvent;
 
 
 export interface SpeakerOut extends BaseModule {
   brand: 'speaker_out';
 }
-
 export interface Link {
   brand: 'link';
   id: string;
@@ -133,7 +145,7 @@ export interface LineFeedback {
 
 export type Feedback = LineFeedback;
 
-export type OutModule = SpeakerOut;
+export type OutModule = SpeakerOut | Recording;
 
 export type OutBrand = OutModule['brand'];
 export type SourceBrand = ConnectableModule['brand'];

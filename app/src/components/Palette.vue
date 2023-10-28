@@ -21,6 +21,7 @@ import GainIcon from '../assets/icons/gain.svg'
 import OscillatorIcon from '../assets/icons/oscillator.svg'
 import WaveShaperIcon from '../assets/icons/wave_shaper.svg'
 import ConvolverIcon from '../assets/icons/convolver.svg'
+import RecordingIcon from '../assets/icons/recording.svg'
 import { CreateToolParam } from '../hooks/intractive_tool';
 
 const { selectedPalette, changeTool } = inject(audioOtterStateKey) as AudiOtterComposition
@@ -81,6 +82,13 @@ const createPatteItemData = (param:  CreateToolParam) => {
         label: 'Conv.',
         pressed: selected
       }
+    case 'recording':
+      return {
+        icon: RecordingIcon,
+        onClick: () => changeTool(selected ? defaultToolParam : param),
+        label: 'Rec.',
+        pressed: selected
+      }
     default:
       throw new Error('invalid type')
   }
@@ -95,6 +103,7 @@ const items = computed(() => {
     createPatteItemData({ type: 'oscillator'}),
     createPatteItemData({ type: 'wave_shaper'}),
     createPatteItemData({ type: 'convolver'}),
+    createPatteItemData({ type: 'recording'}),
   ]
 })
 

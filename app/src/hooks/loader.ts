@@ -1,4 +1,4 @@
-import { BiquadFilter, ConnectableModule, Convolver, Delay, Gain, MicIn, Module, Oscillator, OutModule, SpeakerOut, WaveShaper } from "./types";
+import { BiquadFilter, ConnectableModule, Convolver, Delay, Gain, MicIn, Module, Oscillator, OutModule, Recording, SpeakerOut, WaveShaper } from "./types";
 
 type ConnectableModuleSchema = ConnectableModule;
 
@@ -168,6 +168,18 @@ const fromConvolverSchema = (schema: Convolver): Convolver => {
     param: {}
   }
 }
+ 
+const toRecordingSchema = (module: Recording): Recording => {
+  return {
+    id: module.id,
+    brand: 'recording',
+    position: module.position,
+    destinations: module.destinations,
+    param: {
+      isRecording: false,
+    },
+  }
+}
 
 export const saveModules = (modules: Module[], storageKey: string) => {
 
@@ -189,6 +201,8 @@ export const saveModules = (modules: Module[], storageKey: string) => {
         return toWaveShaperSchema(module);
       case "convolver":
         return module;
+      case "recording":
+        return toRecordingSchema(module);
     }
   });
 
@@ -221,6 +235,8 @@ export const loadModules = async (storageKey: string): Promise< Module[] | undef
         return fromWaveShaperSchema(schema);
       case 'convolver':
         return fromConvolverSchema(schema);
+      case 'recording':
+        return schema;
     }
   });
 

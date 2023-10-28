@@ -12,6 +12,7 @@ import MicIcon from '../assets/icons/mic.svg';
 import SpeakerIcon from '../assets/icons/speaker.svg';
 import WaveShaperIcon from '../assets/icons/wave_shaper.svg';
 import ConvolverIcon from '../assets/icons/convolver.svg';
+import RecordingIcon from '../assets/icons/recording.svg';
 
 type ModuleMap = {
   [key in Module['brand']]: string;
@@ -26,9 +27,10 @@ const moduleLabels: ModuleMap = {
   'oscillator': 'Osc.',
   'wave_shaper': 'Shaper',
   'convolver': 'Conv.',
+  'recording': 'Rec.',
 }
 
-const moduleIcons = {
+const moduleIcons: ModuleMap = {
   'mic_in': MicIcon,
   'biquad_filter': BiquadSvg,
   'delay': DelayIcon,
@@ -37,6 +39,7 @@ const moduleIcons = {
   'oscillator': OscillatorIcon,
   'wave_shaper': WaveShaperIcon,
   'convolver': ConvolverIcon,
+  'recording': RecordingIcon,
 }
 
 type ModuleColors = {
