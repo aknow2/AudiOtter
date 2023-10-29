@@ -27,6 +27,9 @@
       <template v-else-if="selectedItem?.brand === 'recording'">
         <Recording  :item="selectedItem" :on-delete="onDeleteModule" :on-change="updateModuleEvent"  />
       </template>
+      <template v-else-if="selectedItem?.brand === 'mic_in'">
+        <MicIn  :item="selectedItem" :on-change="updateModuleEvent"  />
+      </template>
       <template v-else>
         <Palette />
       </template>
@@ -45,6 +48,7 @@ import Gain from './editors/Gain.vue';
 import Oscillator from './editors/Oscillator.vue';
 import WaveShaper from './editors/WaveShaper.vue';
 import Recording from './editors/Recording.vue';
+import MicIn from './editors/MicIn.vue';
 
 const {
   selectedItem,

@@ -17,7 +17,14 @@ const toMicInSchema = (module: MicIn): MicIn => {
 }
 
 const fromMicInSchema = async (schema: MicIn): Promise<MicIn> => {
-  const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const mediaStream = await navigator.mediaDevices.getUserMedia({
+     audio: {
+        deviceId: schema.param.mic,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+     }
+  });
 
   return {
     id: schema.id,
@@ -26,6 +33,8 @@ const fromMicInSchema = async (schema: MicIn): Promise<MicIn> => {
     destinations: schema.destinations,
     param: {
       stream: mediaStream,
+      mic: schema.param.mic,
+      speaker: schema.param.speaker,
     },
   }
 }

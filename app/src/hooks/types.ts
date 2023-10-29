@@ -26,6 +26,8 @@ export interface BaseModule {
 
 export type MicInParam = BaseModuleParam<{}> & {
   stream: MediaStream;
+  mic: string;
+  speaker: string;
 }
 export interface MicIn extends BaseModule {
   brand: 'mic_in';
@@ -103,13 +105,17 @@ export type InOutModule =  BiquadFilter | Delay | Gain | MicIn | Oscillator | Wa
 export type InModule = MicIn;
 export type ConnectableModule = InModule | InOutModule;
 
+export type ChangeAudioInputEvent = {
+  brand: 'update_mic_in'
+  module: MicIn;
+  audioInput: string;
+}
 
 type BaseUpdateModuleEvent<T extends Module, P extends ModuleParam> = { 
   brand: T['brand'];
   module: T;
   param: P;
 }
-
 export type UpdateBiquadFilterEvent = BaseUpdateModuleEvent<BiquadFilter, BiquadFilterParam>
 export type UpdateWaveShaperEvent = BaseUpdateModuleEvent<WaveShaper, WaveShaperParam>
 export type UpdateDelayEvent = BaseUpdateModuleEvent<Delay, DelayParam>
@@ -117,7 +123,9 @@ export type UpdateGainEvent = BaseUpdateModuleEvent<Gain, GainParam>
 export type UpdateOscillatorEvent = BaseUpdateModuleEvent<Oscillator, OscillatorParam>
 export type UpdateConvolverEvent = BaseUpdateModuleEvent<Convolver, ConvolverParam>
 export type UpdateRecordingEvent = BaseUpdateModuleEvent<Recording, RecordingParam>
-export type UpdateModuleEvent = UpdateBiquadFilterEvent
+export type UpdateModuleEvent = 
+  | ChangeAudioInputEvent
+  | UpdateBiquadFilterEvent
   | UpdateDelayEvent
   | UpdateGainEvent 
   | UpdateOscillatorEvent

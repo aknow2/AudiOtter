@@ -42,7 +42,7 @@ const getDestination = (node: AudioNode, desInfo: DestinationInfo) => {
   return (node as any)[desInfo.paramKey] as any;
 }
 
-const createNode = async (module: ConnectableModule | Recording, context: AudioContext): Promise<AudioNode> => {
+export const createNode = async (module: ConnectableModule | Recording, context: AudioContext): Promise<AudioNode> => {
   switch (module.brand) {
     case 'delay': {
       const node = new DelayNode(context, {
@@ -294,10 +294,22 @@ const createOscillator = (param: CreateModuleParam): Oscillator => {
   }
 }
 
+const findDistination = (module: Module, state: AudiOtterState): [Module, DestinationInfo][] => {
+  return state
+          .modules
+          .reduce<[Module, DestinationInfo][]>((acc, m) => {
+            const des = module.destinations.find((d) => d.id === m.id)
+            if (des) {
+              acc.push([m, des]);
+            }
+            return acc;
+          }, []);
+}
 
-const updateModule = async ({ brand, module, param }: UpdateModuleEvent, state: AudiOtterState) => {
-  switch (brand) {
+const updateModule = async (ev: UpdateModuleEvent, state: AudiOtterState) => {
+  switch (ev.brand) {
     case 'recording': {
+      const { module, param } = ev;
       module.param = param
       if (param.isRecording) {
         const node = state.webAudio.node.get(module.id) as MediaStreamAudioDestinationNode;
@@ -310,6 +322,8 @@ const updateModule = async ({ brand, module, param }: UpdateModuleEvent, state: 
       break;
     }
     case 'delay': {
+
+      const { module, param } = ev;
       module.param = param;
       const node = state.webAudio.node.get(module.id) as DelayNode;
       if (node) {
@@ -318,6 +332,7 @@ const updateModule = async ({ brand, module, param }: UpdateModuleEvent, state: 
     }
     break;
     case 'biquad_filter': {
+      const { module, param } = ev;
       module.param = param
       const node = state.webAudio.node.get(module.id) as BiquadFilterNode;
       if (node) {
@@ -330,6 +345,7 @@ const updateModule = async ({ brand, module, param }: UpdateModuleEvent, state: 
     }
     break;
     case 'gain': {
+      const { module, param } = ev;
       module.param = param
       const node = state.webAudio.node.get(module.id) as GainNode;
       if (node) {
@@ -338,6 +354,7 @@ const updateModule = async ({ brand, module, param }: UpdateModuleEvent, state: 
     }
     break;
     case 'oscillator': {
+      const { module, param } = ev;
       const node = state.webAudio.node.get(module.id) as OscillatorNode;
       if (!node) return
       if (module.param.isPlaying === param.isPlaying) {
@@ -356,32 +373,21 @@ const updateModule = async ({ brand, module, param }: UpdateModuleEvent, state: 
         node.start();
       } else {
         node.stop();
-        const newNode = node.context.createOscillator();
-        const destinations = state
-          .modules
-          .reduce<[Module, DestinationInfo][]>((acc, m) => {
-            const des = module.destinations.find((d) => d.id === m.id)
-            if (des) {
-              acc.push([m, des]);
-            }
-            return acc;
-          }, []);
+        module.param = param
+
+        const newNode = await createNode(module, state.webAudio.context);
         state.webAudio.node.delete(module.id);
         state.webAudio.node.set(module.id, newNode);
 
-        (async () => {
-          for (const [desModule, des] of destinations) {
-            await connect(module, desModule, des, state.webAudio.context, state.webAudio.node);
-          }
-        })().then(() => {});
-        newNode.type = param.type;
-        newNode.frequency.value = param.frequency.value;
-        newNode.detune.value = param.detune.value;
-        module.param = param
+        const destinations = findDistination(module, state);
+        for (const [desModule, des] of destinations) {
+          await connect(module, desModule, des, state.webAudio.context, state.webAudio.node);
+        }
       }
       break;
     }
     case 'wave_shaper': {
+      const { module, param } = ev;
       const curve = createCurve(param.curveType, param.amount.value);
       module.param = {
         ...param,
@@ -395,7 +401,27 @@ const updateModule = async ({ brand, module, param }: UpdateModuleEvent, state: 
       break
     }
     case 'convolver': {
+      const { module, param } = ev;
       module.param = param
+      break;
+    }
+    case 'update_mic_in': {
+      const { module, audioInput } = ev;
+      // disconnect
+      const destinations = findDistination(module, state);
+      for (const [desModule, des] of destinations) {
+        disconnect(module, desModule, des, state.webAudio.context, state.webAudio.node);
+      }
+
+      const newStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: audioInput } });
+      module.param.mic = audioInput;
+      module.param.stream = newStream;
+      state.webAudio.node.delete(module.id);
+
+      for (const [desModule, des] of destinations) {
+        await connect(module, desModule, des, state.webAudio.context, state.webAudio.node);
+      }
+
       break;
     }
     default:
@@ -526,13 +552,15 @@ const createConvolver = (param: CreateModuleParam): Convolver => {
 
 export const createModuleUpdater = (state: AudiOtterState) => (ev: UpdateModuleEvent) => {
   const { module } = ev;
-  updateModule(ev, state).then(() => {});
-  state.modules = state.modules.map((m) => {
-    if (m.id === module.id) {
-      return module;
-    }
-    return m;
-  })
+  updateModule(ev, state).then(() => {
+    state.modules = state.modules.map((m) => {
+      if (m.id === module.id) {
+        return module;
+      }
+      return m;
+    })
+  });
+  
 }
 
 export const createModuleCreator = (state: AudiOtterState) => (param: CreateModuleParam) => {

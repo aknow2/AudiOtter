@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { BiquadFilter, Delay, Gain, MicIn, SpeakerOut } from "./types";
+import { MicIn, SpeakerOut } from "./types";
 
 export const loadSample = async () => {
   const speakerOut: SpeakerOut = {
@@ -12,7 +12,14 @@ export const loadSample = async () => {
     destinations: [],
   }
 
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: {
+    deviceId: 'default',
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+  } });
+  const mic = stream.getAudioTracks().find(track => track.kind === 'audioinput')?.kind ?? 'true';
+  const speaker = stream.getAudioTracks().find(track => track.kind === 'audiooutput')?.kind ?? 'true';
   const micIn: MicIn = {
     id: nanoid(),
     brand: 'mic_in',
@@ -22,6 +29,8 @@ export const loadSample = async () => {
     },
     param: { 
       stream,
+      mic,
+      speaker,
     },
     destinations: [],
   }
