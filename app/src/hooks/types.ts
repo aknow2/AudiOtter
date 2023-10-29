@@ -1,3 +1,4 @@
+
 export interface Position {
   x: number;
   y: number;
@@ -123,8 +124,7 @@ export type UpdateGainEvent = BaseUpdateModuleEvent<Gain, GainParam>
 export type UpdateOscillatorEvent = BaseUpdateModuleEvent<Oscillator, OscillatorParam>
 export type UpdateConvolverEvent = BaseUpdateModuleEvent<Convolver, ConvolverParam>
 export type UpdateRecordingEvent = BaseUpdateModuleEvent<Recording, RecordingParam>
-export type UpdateModuleEvent = 
-  | ChangeAudioInputEvent
+export type UpdateModuleParamEvent =
   | UpdateBiquadFilterEvent
   | UpdateDelayEvent
   | UpdateGainEvent 
@@ -132,6 +132,11 @@ export type UpdateModuleEvent =
   | UpdateConvolverEvent
   | UpdateRecordingEvent
   | UpdateWaveShaperEvent;
+
+
+export type UpdateModuleEvent = 
+  | ChangeAudioInputEvent
+  | UpdateModuleParamEvent;
 
 
 export interface SpeakerOut extends BaseModule {

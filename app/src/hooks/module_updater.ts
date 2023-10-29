@@ -322,7 +322,6 @@ const updateModule = async (ev: UpdateModuleEvent, state: AudiOtterState) => {
       break;
     }
     case 'delay': {
-
       const { module, param } = ev;
       module.param = param;
       const node = state.webAudio.node.get(module.id) as DelayNode;

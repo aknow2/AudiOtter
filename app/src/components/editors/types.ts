@@ -1,3 +1,3 @@
-import { UpdateModuleEvent } from "../../hooks/types";
+import { UpdateModuleParamEvent } from "../../hooks/types";
 
-export type OnUpdateParam<T extends UpdateModuleEvent> = <K extends keyof T['param']>(key: K, p: T['param'][K]) => void
+export type OnUpdateParam<T extends UpdateModuleParamEvent> = <K extends keyof T['param']>(key: K, p: T['param'][K]) => void
