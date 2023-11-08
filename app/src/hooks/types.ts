@@ -13,9 +13,9 @@ export type RangeSetting = {
 type AudioNodeParam <T extends AudioNodeOptions> = {
   [K in keyof T]: T[K] extends (number | undefined) ? RangeSetting : T[K];
 }
-type AudioParamKeys<T> = {
+export type DefineAudioParamKeys<T> = {
     [K in keyof T]: T[K] extends AudioParam ? K : never;
-}[keyof T];
+}[keyof T][];
 
 type BaseModuleParam<T extends AudioNodeOptions, O extends keyof T = never> = Omit<
   Required<AudioNodeParam<T>>,'channelCount' | 'channelCountMode' | 'channelInterpretation' | O> 
@@ -52,7 +52,6 @@ export interface WaveShaper extends BaseModule {
 }
 
 export type BiquadFilterParam = BaseModuleParam<BiquadFilterOptions>
-export type BiquadFilterNodeAudioParamKeys = AudioParamKeys<BiquadFilterNode>;
 export interface BiquadFilter extends BaseModule {
   brand: 'biquad_filter';
   param: BiquadFilterParam;
@@ -83,7 +82,6 @@ export type RecordingParam  = {
 export interface Recording extends BaseModule {
   brand: 'recording';
   param: RecordingParam;
-  stopRecording?: () => Promise<void>;
 }
 
 export type ModuleParam = 
@@ -111,6 +109,15 @@ export type ChangeAudioInputEvent = {
   module: MicIn;
   audioInput: string;
 }
+
+export type AudioParamKeys = 
+  | DefineAudioParamKeys<BiquadFilterNode>
+  | DefineAudioParamKeys<DelayNode>
+  | DefineAudioParamKeys<GainNode>
+  | DefineAudioParamKeys<OscillatorNode>
+  | DefineAudioParamKeys<WaveShaperNode>
+  | DefineAudioParamKeys<ConvolverNode>
+
 
 type BaseUpdateModuleEvent<T extends Module, P extends ModuleParam> = { 
   brand: T['brand'];
@@ -176,7 +183,6 @@ export interface AudiOtterState {
   linkMap: LinkMap;
   webAudio: {
     context: AudioContext;
-    node: NodeMap;
   }
   selectedItems: string[];
   draggingItem?: string;

@@ -15,12 +15,13 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { DeepReadonly, PropType, computed, defineProps, inject } from 'vue'
+import { DeepReadonly, PropType, computed, defineProps } from 'vue'
 import ContainButton from '../ContainButton.vue';
 import Dropdown, { SelectItem } from '../Dropdown.vue';
-import { Link, Module } from '../../hooks/types';
-import { AudiOtterComposition, audioOtterStateKey } from '../../hooks/AudiOtterState';
+import { ConnectableModule, Link, Module } from '../../hooks/types';
+import { AudiOtterComposition } from '../../hooks/AudiOtterState';
 import { isConnectableModule } from '../../hooks/module_updater';
+import { AudioParamKeys, DefineAudioParamKeys } from '../../hooks/types';
 
 const props = defineProps({
   item: {
@@ -73,7 +74,38 @@ const selectedDestination = computed(() => {
   return info?.target === 'param' ? info.paramKey : 'node'
 })
 
-const composition = inject(audioOtterStateKey) as AudiOtterComposition
+const getAudioParamKeys = (mod: ConnectableModule): AudioParamKeys => {
+  switch(mod.brand) {
+    case 'biquad_filter': {
+      const keys: DefineAudioParamKeys<BiquadFilterNode> = ['Q', 'frequency', 'gain', 'detune']
+      return keys
+    }
+    case 'gain': {
+      const keys: DefineAudioParamKeys<GainNode> = ['gain']
+      return keys
+    }
+    case 'delay': {
+      const keys: DefineAudioParamKeys<DelayNode> = ['delayTime']
+      return keys
+    }
+    case 'convolver': {
+      const keys: DefineAudioParamKeys<ConvolverNode> = []
+      return keys
+    }
+    case 'oscillator': {
+      const keys: DefineAudioParamKeys<OscillatorNode> = ['frequency', 'detune']
+      return keys
+    }
+    case 'wave_shaper': {
+      const keys: DefineAudioParamKeys<WaveShaperNode> = []
+      return keys
+    }
+    case 'mic_in': {
+      const keys: DefineAudioParamKeys<MediaStreamAudioSourceNode> = []
+      return keys
+    }
+  }
+}
 
 const selectableDestinations = computed(() => {
   const src = source.value;
@@ -82,16 +114,8 @@ const selectableDestinations = computed(() => {
 
   if (destinationInfo && des && source) {
     if (isConnectableModule(des)) {
-      // fixme: this is a hack to get the audio param keys
-      const node = composition.state.webAudio.node.get(des.id) as any;
-      if (!node) {
-        throw new Error(`Could not find node for module ${des.id}`)
-      }
       // find all audio params
-      const list =  Object.getOwnPropertyNames(Object.getPrototypeOf(node))
-        .filter((key) => {
-          return node[key] instanceof AudioParam
-        }) 
+      const list =  getAudioParamKeys(des)
         .map<SelectItem>((paramKey) => {
           return {
             label: paramKey,

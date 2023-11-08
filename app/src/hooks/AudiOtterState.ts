@@ -36,7 +36,6 @@ const useAudiOtter = () => {
     selectedItems: [],
     webAudio: {
       context: null as any,
-      node: new Map(),
     }
   });
   const { tool, changeTool, selectedPalette } = useIntractiveTool(mutableState);
