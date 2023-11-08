@@ -48,6 +48,7 @@ type ModuleColors = {
 const moduleFillColors: ModuleColors = {
   'mic_in': 0xF288C2,
   'oscillator': 0xF288C2,
+  'recording': 0xF25D27, 
   'speaker_out': 0xF25D27,
 }
 
