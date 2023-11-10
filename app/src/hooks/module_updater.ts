@@ -31,7 +31,7 @@ export const createLink = (srcModule: ConnectableModule, desModule: Module, link
 }
 
 
-export const connectModuleProcess = async (
+const connectModuleProcess = (
   srcModule: Module,
   desModule: Module,
   destination: DestinationInfo,
@@ -41,19 +41,18 @@ export const connectModuleProcess = async (
   if (canCreateLink(linkMap, srcModule, desModule, linkId)) {
     const link = createLink(srcModule, desModule, linkId)
     linkMap.set(link.id, link)
-    await nodeManager.connect(srcModule, desModule, destination, context);
+    nodeManager.connect(srcModule, desModule, destination, context);
   }
 }
 
-export const connectModules = async (
+export const connectModules = (
   srcModule: Module,
   state: AudiOtterState,
 ) => {
   for (const destination of srcModule.destinations) {
-    console.log('connect', srcModule.id, destination.id)
     const desModule = state.modules.find((m) => m.id === destination.id);
     if (desModule) {
-      await connectModuleProcess(srcModule, desModule, destination, state);
+      connectModuleProcess(srcModule, desModule, destination, state);
     }
   }
 }
@@ -86,6 +85,15 @@ const createDelay = (param: CreateModuleParam): Delay => {
       },
     },
     destinations: [],
+  }
+}
+
+export const initModuleAndLink = (modules: Module[], state: AudiOtterState) => {
+  for (const module of modules) {
+    nodeManager.create(module, state.webAudio.context);
+  }
+  for (const module of modules) {
+    connectModules(module, state);
   }
 }
 
@@ -460,6 +468,7 @@ export const createModuleUpdater = (state: AudiOtterState) => (ev: UpdateModuleE
 
 export const createModuleCreator = (state: AudiOtterState) => (param: CreateModuleParam) => {
   const module = createModule(param);
+  nodeManager.create(module, state.webAudio.context);
   state.modules = [...state.modules, module];
 }
 
@@ -490,7 +499,7 @@ const deleteLink = (state: AudiOtterState, deleteLink: Link) => {
   state.selectedItems = []
 }
 
-export const changeDestination = (state: AudiOtterState) => async (moduleId: string, desInfo: DestinationInfo) => {
+export const changeDestination = (state: AudiOtterState) => (moduleId: string, desInfo: DestinationInfo) => {
   const module = state.modules.find((m) => m.id === moduleId)
   const oldInfo = module?.destinations.find((d) => d.id === desInfo.id);
   const desModule = state.modules.find((m) => m.id === desInfo.id);
@@ -499,7 +508,7 @@ export const changeDestination = (state: AudiOtterState) => async (moduleId: str
   }
 
   nodeManager.disconnect(module, desModule, oldInfo, state.webAudio.context);
-  await nodeManager.connect(module, desModule, desInfo, state.webAudio.context);
+  nodeManager.connect(module, desModule, desInfo, state.webAudio.context);
 
   module.destinations = module.destinations.map((d) => {
     if (d.id === desInfo.id) {

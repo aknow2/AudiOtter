@@ -1,20 +1,11 @@
-import { createRecordingInvoker } from "../../components/editors/composable/useRecording";
-import { ConnectableModule, DestinationInfo, Module, NodeMap, Oscillator, OscillatorParam, OutModule, Recording, UpdateModuleEvent } from "../types";
+import { ConnectableModule, DestinationInfo, Module, NodeMap, Oscillator, OscillatorParam, OutModule, UpdateModuleEvent } from "../types";
 import { createNode } from "./creator";
+import { createRecorder } from "./recorder";
 
 const isSpeaker = (module: Module|undefined): module is OutModule => {
   return module?.brand === 'speaker_out';
 }
 
-const getOrCreateNode = async (module: ConnectableModule | Recording, context: AudioContext, nodeMap: NodeMap): Promise<AudioNode> => {
-  const node = nodeMap.get(module.id);
-  if (node) {
-    return node;
-  }
-  const newNode = await createNode(module, context);
-  nodeMap.set(module.id, newNode);
-  return newNode;
-}
 const getDestination = (node: AudioNode, desInfo: DestinationInfo) => {
   if (desInfo.target === 'node') {
     return node;
@@ -42,17 +33,24 @@ const createDisconnect = (nodeMap: NodeMap) => (srcModule: ConnectableModule, de
   }
 }
 
-export const createConnect = (nodeMap: NodeMap) => async (
+const createConnect = (nodeMap: NodeMap) => (
   srcModule: ConnectableModule,
   desModule: Module,
   desInfo: DestinationInfo,
   context: AudioContext) => {
-  const srcNode = await  getOrCreateNode(srcModule, context, nodeMap)
+  const srcNode =  nodeMap.get(srcModule.id);
+  if (srcNode === undefined) {
+    throw new Error('Not found node in nodeMap');
+  }
+
   console.log(srcModule.brand, 'to', desModule.brand, context.state, nodeMap)
   if (isSpeaker(desModule)) {
     srcNode.connect(context.destination);
   } else {
-    const desNode = await getOrCreateNode(desModule, context, nodeMap)
+    const desNode = nodeMap.get(desModule.id);
+    if (desNode === undefined) {
+      throw new Error('Not found node in nodeMap');
+    }
     const des =  getDestination(desNode, desInfo)
     srcNode.connect(des);
   }
@@ -116,6 +114,7 @@ const createNodeEventDispatcher = ({ nodeMap }: { nodeMap: NodeMap }) => async (
       break;
     }
     case 'start_oscillator': {
+      const { module } = ev;
       const node = nodeMap.get(module.id) as OscillatorNode;
       node.start();
       break;
@@ -142,29 +141,9 @@ const createNodeEventDispatcher = ({ nodeMap }: { nodeMap: NodeMap }) => async (
   }
 }
 
-const createRecorder = (nodeMap: NodeMap) => {
-  const stoppers = new Map<string, () => Promise<void>>();
-
-  const start = async (module: Recording) => {
-    const node = nodeMap.get(module.id) as MediaStreamAudioDestinationNode;
-    const invoker = await createRecordingInvoker(node)
-    const stopper = await invoker();
-    stoppers.set(module.id, stopper);
-  }
-
-  const stop = async (module: Recording) => {
-    const stopper = stoppers.get(module.id);
-    stoppers.delete(module.id);
-    if (stopper) {
-      await stopper();
-    }
-  }
-
-
-  return {
-    start,
-    stop,
-  }
+const createNodeCreator = (nodeMap: NodeMap) => async (module: Module, context: AudioContext) => {
+  const node = await createNode(module, context);
+  nodeMap.set(module.id, node);
 }
 
 const createNodeManager = () => {
@@ -173,6 +152,7 @@ const createNodeManager = () => {
     connect: createConnect(nodeMap),
     disconnect: createDisconnect(nodeMap),
     disptach: createNodeEventDispatcher({ nodeMap }),
+    create: createNodeCreator(nodeMap),
     deleteNode: nodeMap.delete,
     recorder: createRecorder(nodeMap),
     nodeMap,

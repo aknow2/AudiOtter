@@ -1,7 +1,7 @@
-import { ConnectableModule, Recording } from "../types";
+import { Module } from "../types";
 import ir from '../../assets/sounds/ir.wav';
 
-export const createNode = async (module: ConnectableModule | Recording, context: AudioContext): Promise<AudioNode> => {
+export const createNode = async (module: Module, context: AudioContext): Promise<AudioNode> => {
   switch (module.brand) {
     case 'delay': {
       const node = new DelayNode(context, {
@@ -58,6 +58,9 @@ export const createNode = async (module: ConnectableModule | Recording, context:
     case "recording": {
       const node = context.createMediaStreamDestination();
       return node;
+    }
+    case "speaker_out": {
+      throw new Error("speaker_out is not supported");
     }
   }
 }

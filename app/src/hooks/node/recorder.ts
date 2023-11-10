@@ -1,3 +1,4 @@
+import { NodeMap, Recording } from "../types";
 
 const getWritableStream = async () => {
   const options = {
@@ -36,3 +37,29 @@ export const createRecordingInvoker = (streamNode: MediaStreamAudioDestinationNo
 }
 
 export type StopRecording = () => Promise<void>;
+
+
+export const createRecorder = (nodeMap: NodeMap) => {
+  const stoppers = new Map<string, () => Promise<void>>();
+
+  const start = async (module: Recording) => {
+    const node = nodeMap.get(module.id) as MediaStreamAudioDestinationNode;
+    const invoker = await createRecordingInvoker(node)
+    const stopper = await invoker();
+    stoppers.set(module.id, stopper);
+  }
+
+  const stop = async (module: Recording) => {
+    const stopper = stoppers.get(module.id);
+    stoppers.delete(module.id);
+    if (stopper) {
+      await stopper();
+    }
+  }
+
+  return {
+    start,
+    stop,
+  }
+}
+

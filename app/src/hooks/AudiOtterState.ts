@@ -1,7 +1,7 @@
 import { InjectionKey, computed, reactive, readonly} from "vue"
 import { Item, AudiOtterState, Module } from "./types";
 import { useIntractiveTool } from "./intractive_tool";
-import { changeDestination, connectModules, onDeleteLinkHandler, onDeleteModuleHandler } from "./module_updater";
+import { changeDestination, initModuleAndLink, onDeleteLinkHandler, onDeleteModuleHandler } from "./module_updater";
 import { loadModules, saveModules } from "./loader";
 import { loadSample } from "./sample_modules";
 
@@ -17,11 +17,7 @@ const initModules = async (): Promise<Module[]> => {
   return await loadSample();
 }
 
-const connectModuleAndLink = async (modules: Module[], state: AudiOtterState) => {
-  for (const module of modules) {
-    await connectModules(module, state);
-  }
-}
+
 
 const useAudiOtter = () => {
   window.addEventListener('beforeunload', (ev) => {
@@ -46,7 +42,7 @@ const useAudiOtter = () => {
     mutableState.status = 'loading';
     const modules = await initModules();
     mutableState.modules = modules;
-    await connectModuleAndLink(modules, mutableState);
+    initModuleAndLink(modules, mutableState);
     mutableState.status = 'running';
   };
 

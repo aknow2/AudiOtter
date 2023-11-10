@@ -1,3 +1,4 @@
+import { Point } from "pixi.js";
 
 export interface Position {
   x: number;
@@ -185,6 +186,9 @@ export interface AudiOtterState {
     context: AudioContext;
   }
   selectedItems: string[];
-  draggingItem?: string;
+  draggingItem?: {
+    id: string;
+    offset: [number, number];
+  };
   feedBack?: Feedback;
 }

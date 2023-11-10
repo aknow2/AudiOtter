@@ -38,16 +38,24 @@ const toggleSelectedItem = (state: AudiOtterState, itemId: string | undefined) =
 };
 export const createDefaultIntractiveTool = ({ state }: ToolContext): IntractiveTool  => ({
   onDown(ev) {
-    state.draggingItem = ev.itemId;
+    if (ev.itemId === undefined) return;
+    state.draggingItem = {
+      id: ev.itemId,
+      offset: ev.position,
+    };
   },
   onMove(ev) {
-    if (state.draggingItem) {
-      updateModulePosition(state, ev.position, state.draggingItem);
+    const { draggingItem } = state
+    if (draggingItem) {
+      const { id, offset } = draggingItem
+      updateModulePosition(state, [ev.position[0] - offset[0], ev.position[1] - offset[1]], id);
     }
   },
   onUp(ev) {
-    if (state.draggingItem) {
-      updateModulePosition(state, ev.position, state.draggingItem);
+    const { draggingItem } = state
+    if (draggingItem) {
+      const { id, offset } = draggingItem
+      updateModulePosition(state, [ev.position[0] - offset[0], ev.position[1] - offset[1]], id);
       state.draggingItem = undefined;
     }
     toggleSelectedItem(state, ev.itemId);
@@ -84,14 +92,14 @@ export const createConnectingModuleTool = ({state}: ToolContext): IntractiveTool
     onMove({ position }) {
       updateFeedbackIfExist({ x: position[0], y: position[1] }, state);
     },
-    async onUp({ itemId }) {
+    onUp({ itemId }) {
       const srcModule =  state.modules.find((m) => m.id === state.feedBack?.srcId)
       const desModule = state.modules.find((m) => m.id === itemId)
       if (desModule && srcModule) {
         const linkId = createLinkId(srcModule, desModule);
         if (canCreateLink(state.linkMap, srcModule, desModule, linkId)) {
           srcModule.destinations.push({ target: 'node', id: desModule.id });
-          await connectModules(srcModule, state);
+          connectModules(srcModule, state);
           state.linkMap = new Map(state.linkMap)
         }
       }

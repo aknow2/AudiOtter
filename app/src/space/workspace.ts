@@ -111,28 +111,29 @@ const bindModuleEvent = (module: PIXI.DisplayObject, { tool }: AudiOtterComposit
   module.on('pointerdown', (ev) => {
     ev.stopPropagation();
     tool.value.onDown({
-      position: [ev.global.x - halfOfComponent, ev.global.y - halfOfComponent],
+      position: [ev.global.x - module.position.x, ev.global.y - module.position.y], // offset
       itemId: module.name as string
     })
   });
   module.on('pointerup', (ev) => {
     ev.stopPropagation();
     tool.value.onUp({
-      position: [ev.global.x - halfOfComponent, ev.global.y - halfOfComponent],
+      position: [ev.global.x, ev.global.y],
       itemId: module.name as string
     })
   });
   module.on('pointerupoutside', (ev) => {
     ev.stopPropagation();
     tool.value.onUp({
-      position: [ev.global.x - halfOfComponent, ev.global.y - halfOfComponent],
+      position: [ev.global.x, ev.global.y],
       itemId: module.name as string
     })
   });
   module.on('pointermove', (ev) => {
+    console.log('pointermove', ev.client, ev.global, ev.page, ev.movement)
     ev.stopPropagation();
     tool.value.onMove({
-      position: [ev.global.x - halfOfComponent, ev.global.y - halfOfComponent],
+      position: [ev.global.x, ev.global.y],
       itemId: module.name as string
     })
   });
